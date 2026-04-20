@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const envSchema = z.object({
   // ── API ──────────────────────────────────────────────────────────────────
-  NEXT_PUBLIC_API_BASE_URL: z.string().url().default("http://127.0.0.1:8005/api/v1"),
+  NEXT_PUBLIC_API_BASE_URL: z.string().url().default("https://api.stayhubindia.com/api/v1"),
 
   // ── App environment ──────────────────────────────────────────────────────
   NEXT_PUBLIC_APP_ENV: z.enum(["local", "development", "staging", "production"]).default("development"),
