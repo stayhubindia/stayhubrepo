@@ -3,7 +3,7 @@
 .env.local
 .env.*.local
 *.env
-!*.env.example
+
 
 # ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
@@ -93,3 +93,5 @@ Assest/
 # ── Generated / local files ───────────────────────────────────────────────────
 Memory/
 ServerCOMMAND.txt
+
+/docs
