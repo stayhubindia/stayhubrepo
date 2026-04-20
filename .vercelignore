@@ -1,0 +1,10 @@
+Apps/stayhub
+Server
+Assest
+docs
+Memory
+Reference
+README*
+ServerCOMMAND.txt
+*.md
+!Apps/webapp/**

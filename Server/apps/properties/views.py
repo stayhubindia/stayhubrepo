@@ -7,6 +7,9 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.openapi import AutoSchema
+import uuid
 
 from apps.properties.filters import PropertyFilter
 from apps.properties.models import Property, PropertyImage
@@ -186,6 +189,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
         )
         return Response(PropertyImageSerializer(image_obj).data, status=status.HTTP_201_CREATED)
 
+    @extend_schema(parameters=[OpenApiParameter("image_id", type=uuid.UUID, location=OpenApiParameter.PATH)])
     @action(
         detail=True,
         methods=["post"],
@@ -197,6 +201,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
         image_obj = PropertyService.set_primary_image(property_obj, request.user, image_obj)
         return Response(PropertyImageSerializer(image_obj).data, status=status.HTTP_200_OK)
 
+    @extend_schema(parameters=[OpenApiParameter("image_id", type=uuid.UUID, location=OpenApiParameter.PATH)])
     @action(
         detail=True,
         methods=["delete"],

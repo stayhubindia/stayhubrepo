@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.openapi import AutoSchema
 
 from apps.analytics.models import LocationHeatmap, OwnerDashboardSnapshot, PropertyDailyAggregate
 
@@ -20,6 +22,7 @@ class OwnerDashboardSnapshotSerializer(serializers.ModelSerializer):
 class LocationHeatmapSerializer(serializers.ModelSerializer):
     location = serializers.SerializerMethodField()
 
+    @extend_schema_field(serializers.DictField())
     def get_location(self, obj):
         loc = obj.location
         return {

@@ -130,6 +130,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 ROOT_URLCONF = "server.urls"
@@ -208,6 +209,8 @@ REST_FRAMEWORK = {
         "message_send": "30/minute",
         "property_read": "1000/hour",
         "property_write": "100/hour",
+        # Analytics
+        "analytics_read": "200/hour",
         # Client-identity scopes (IPRateThrottle / DeviceRateThrottle)
         "ip": "300/hour",
         "device": "500/hour",
@@ -220,10 +223,16 @@ REST_FRAMEWORK = {
 # ======================================================
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "GharBazar API",
+    "TITLE": "Stayhub India API",
     "DESCRIPTION": "Rental property platform API",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "ENUM_NAME_OVERRIDES": {
+        "UserRoleEnum": ["OWNER", "TENANT", "ADMIN"],
+        "ConversationStatusEnum": ["ACTIVE", "ARCHIVED"],
+        "PropertyStatusEnum": ["DRAFT", "PENDING", "ACTIVE", "RENTED", "EXPIRED", "REJECTED"],
+        "PreferredTenantEnum": ["MALE", "FEMALE", "ANY"],
+    },
 }
 
 

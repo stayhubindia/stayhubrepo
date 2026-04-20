@@ -2,6 +2,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from apps.favorites.models import Favorite
 from apps.favorites.serializers import FavoriteCreateSerializer, FavoriteSerializer
@@ -10,6 +11,7 @@ from apps.properties.models import Property
 
 
 class FavoriteListCreateAPIView(APIView):
+    @extend_schema(responses={200: FavoriteSerializer(many=True)})
     def get(self, request):
         queryset = (
             Favorite.objects
@@ -19,6 +21,7 @@ class FavoriteListCreateAPIView(APIView):
         )
         return Response(FavoriteSerializer(queryset, many=True).data)
 
+    @extend_schema(request=FavoriteCreateSerializer, responses={200: FavoriteSerializer, 201: FavoriteSerializer})
     def post(self, request):
         serializer = FavoriteCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -31,6 +34,7 @@ class FavoriteListCreateAPIView(APIView):
 
 
 class FavoriteDeleteAPIView(APIView):
+    @extend_schema(responses={204: OpenApiResponse(description="Deleted")})
     def delete(self, request, property_id):
         property_obj = get_object_or_404(Property, id=property_id)
         deleted = FavoriteService.remove_favorite(request.user, property_obj)

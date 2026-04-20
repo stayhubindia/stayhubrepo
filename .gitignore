@@ -95,3 +95,4 @@ Memory/
 ServerCOMMAND.txt
 
 /docs
+.env*.local

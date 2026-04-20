@@ -4,6 +4,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema, OpenApiResponse, inline_serializer
+from rest_framework import serializers as drf_serializers
 
 from core.throttles import AuthRateThrottle
 from apps.users.serializers import (
@@ -20,6 +22,7 @@ class FirebaseLoginAPIView(APIView):
     throttle_classes = [AuthRateThrottle]
     permission_classes = [AllowAny]
 
+    @extend_schema(request=FirebaseLoginSerializer, responses={200: UserProfileSerializer})
     def post(self, request):
         serializer = FirebaseLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -63,6 +66,7 @@ class EmailOTPRequestAPIView(APIView):
     throttle_classes = [AuthRateThrottle]
     permission_classes = [AllowAny]
 
+    @extend_schema(request=EmailOTPRequestSerializer, responses={200: OpenApiResponse(description="OTP sent")})
     def post(self, request):
         serializer = EmailOTPRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -75,6 +79,7 @@ class EmailOTPVerifyAPIView(APIView):
     throttle_classes = [AuthRateThrottle]
     permission_classes = [AllowAny]
 
+    @extend_schema(request=EmailOTPVerifySerializer, responses={200: UserProfileSerializer})
     def post(self, request):
         serializer = EmailOTPVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -99,9 +104,11 @@ class EmailOTPVerifyAPIView(APIView):
 
 
 class MeAPIView(APIView):
+    @extend_schema(responses={200: UserProfileSerializer})
     def get(self, request):
         return Response(UserProfileSerializer(request.user).data, status=status.HTTP_200_OK)
 
+    @extend_schema(request=UserProfileUpdateSerializer, responses={200: UserProfileSerializer})
     def patch(self, request):
         serializer = UserProfileUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -115,6 +122,10 @@ class LinkFirebaseAPIView(APIView):
     throttle_classes = [AuthRateThrottle]
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        request=inline_serializer("FirebaseTokenRequest", fields={"firebase_token": drf_serializers.CharField()}),
+        responses={200: UserProfileSerializer},
+    )
     def post(self, request):
         firebase_token = request.data.get("firebase_token")
         if not firebase_token:

@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
+from drf_spectacular.utils import extend_schema
 
 from apps.analytics.models import LocationHeatmap, OwnerDashboardSnapshot, PropertyDailyAggregate
 from apps.analytics.serializers import (
@@ -33,6 +34,7 @@ class OwnerDashboardView(APIView):
     permission_classes = [IsAuthenticated]
     throttle_scope = "analytics_read"
 
+    @extend_schema(responses={200: OwnerDashboardSnapshotSerializer(many=True)})
     def get(self, request):
         start = _parse_date(_get_query_param(request, "start", "start_date"), date.today())
         end = _parse_date(_get_query_param(request, "end", "end_date"), start)
@@ -46,6 +48,7 @@ class PropertyDailyView(APIView):
     permission_classes = [IsAuthenticated]
     throttle_scope = "analytics_read"
 
+    @extend_schema(responses={200: PropertyDailyAggregateSerializer(many=True)})
     def get(self, request):
         start = _parse_date(_get_query_param(request, "start", "start_date"), date.today())
         end = _parse_date(_get_query_param(request, "end", "end_date"), start)
@@ -63,6 +66,7 @@ class LocationHeatmapView(APIView):
     permission_classes = [IsAuthenticated]
     throttle_scope = "analytics_read"
 
+    @extend_schema(responses={200: LocationHeatmapSerializer(many=True)})
     def get(self, request):
         if not getattr(request.user, "is_staff", False):
             return Response({"detail": "Heatmap access is staff-only"}, status=status.HTTP_403_FORBIDDEN)
