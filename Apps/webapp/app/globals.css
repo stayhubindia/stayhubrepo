@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f3f7f9;
+  --surface: #ffffff;
+  --text: #0f1722;
+  --muted: #52617a;
+  --accent: #0f766e;
+  --accent-strong: #115e59;
+  --line: #d8e2ea;
+  --ring: rgba(15, 118, 110, 0.35);
+}
+
+@theme inline {
+  --font-sans: var(--font-space-grotesk);
+  --font-mono: var(--font-ibm-plex-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--text);
+  min-height: 100vh;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
+}
+
+a,
+button {
+  transition: all 0.2s ease;
+}
+
+.gb-shell {
+  background:
+    radial-gradient(circle at 10% 10%, rgba(15, 118, 110, 0.18), transparent 40%),
+    radial-gradient(circle at 90% 20%, rgba(17, 94, 89, 0.15), transparent 35%),
+    linear-gradient(180deg, #f7fbfd 0%, #eef4f8 100%);
+}
+
+.gb-auth-shell {
+  min-height: 100vh;
+}
+
+/* Hide scrollbars while preserving scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;   /* IE/Edge */
+  scrollbar-width: none;      /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;              /* Chrome/Safari/Opera */
+}
+
+@media (min-width: 768px) {
+  .gb-auth-shell {
+    background-image: url("/auth-background.png");
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+  }
+}
+
+.gb-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(15, 23, 34, 0.06);
+}
+
+.gb-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+  background: #fff;
+  color: var(--text);
+  outline: none;
+}
+
+.gb-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.gb-btn-primary {
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+  color: #fff;
+  font-weight: 600;
+}
+
+.gb-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(15, 94, 89, 0.3);
+}
+
+.gb-btn-ghost {
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.gb-fade-up {
+  animation: gb-fade-up 0.5s ease both;
+}
+
+@keyframes gb-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

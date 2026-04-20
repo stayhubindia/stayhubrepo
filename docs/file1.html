@@ -1,0 +1,719 @@
+<h1 id="gharbazar---property-rental-marketplace">GharBazar - Property
+Rental Marketplace</h1>
+<h2 id="project-overview">📋 Project Overview</h2>
+<p>GharBazar is a modern, full-stack property rental marketplace
+platform that connects property owners with tenants directly,
+eliminating the need for brokers. The platform features real-time chat,
+property management, favorites, analytics, and a mobile-first responsive
+design.</p>
+<hr />
+<h2 id="tech-stack">🛠️ Tech Stack</h2>
+<h3 id="frontend-web-application"><strong>Frontend (Web
+Application)</strong></h3>
+<h4 id="core-framework">Core Framework</h4>
+<ul>
+<li><strong>Next.js 15.5.12</strong> - React framework with App
+Router</li>
+<li><strong>React 19</strong> - UI library with latest features</li>
+<li><strong>TypeScript</strong> - Type-safe development</li>
+</ul>
+<h4 id="styling-ui">Styling &amp; UI</h4>
+<ul>
+<li><strong>Tailwind CSS 3.4.1</strong> - Utility-first CSS
+framework</li>
+<li><strong>Lucide React</strong> - Modern icon library</li>
+<li><strong>Custom CSS Animations</strong> - Smooth transitions and
+effects</li>
+</ul>
+<h4 id="state-management">State Management</h4>
+<ul>
+<li><strong>Zustand</strong> - Lightweight state management</li>
+<li><strong>TanStack Query (React Query)</strong> - Server state
+management</li>
+<li><strong>Persist Middleware</strong> - State persistence</li>
+</ul>
+<h4 id="real-time-communication">Real-time Communication</h4>
+<ul>
+<li><strong>Native WebSocket</strong> - Real-time messaging</li>
+<li><strong>Django Channels</strong> - WebSocket backend
+integration</li>
+<li><strong>React Hot Toast</strong> - Toast notifications</li>
+</ul>
+<h4 id="authentication">Authentication</h4>
+<ul>
+<li><strong>JWT (JSON Web Tokens)</strong> - Secure authentication</li>
+<li><strong>Firebase Auth</strong> - Google OAuth integration</li>
+<li><strong>HTTP-only Cookies</strong> - Secure token storage</li>
+</ul>
+<h4 id="http-client">HTTP Client</h4>
+<ul>
+<li><strong>Axios</strong> - Promise-based HTTP client</li>
+<li><strong>Interceptors</strong> - Request/response handling</li>
+<li><strong>Error handling</strong> - Centralized error management</li>
+</ul>
+<h4 id="development-tools">Development Tools</h4>
+<ul>
+<li><strong>ESLint</strong> - Code linting</li>
+<li><strong>TypeScript</strong> - Static type checking</li>
+<li><strong>Hot Module Replacement</strong> - Fast refresh</li>
+</ul>
+<hr />
+<h3 id="backend-api-server"><strong>Backend (API Server)</strong></h3>
+<h4 id="core-framework-1">Core Framework</h4>
+<ul>
+<li><strong>Django 5.1.4</strong> - Python web framework</li>
+<li><strong>Django REST Framework 3.15.2</strong> - RESTful API
+toolkit</li>
+<li><strong>Python 3.11+</strong> - Programming language</li>
+</ul>
+<h4 id="database">Database</h4>
+<ul>
+<li><strong>PostgreSQL</strong> - Primary relational database</li>
+<li><strong>psycopg2-binary 2.9.10</strong> - PostgreSQL adapter</li>
+</ul>
+<h4 id="real-time-features">Real-time Features</h4>
+<ul>
+<li><strong>Django Channels 4.1.0</strong> - WebSocket support</li>
+<li><strong>Channels Redis 4.2.0</strong> - Channel layer backend</li>
+<li><strong>Redis</strong> - Message broker and caching</li>
+</ul>
+<h4 id="authentication-security">Authentication &amp; Security</h4>
+<ul>
+<li><strong>djangorestframework-simplejwt 5.4.0</strong> - JWT
+authentication</li>
+<li><strong>Firebase Admin SDK</strong> - Google OAuth verification</li>
+<li><strong>CORS Headers</strong> - Cross-origin resource sharing</li>
+<li><strong>django-cors-headers 4.6.0</strong> - CORS middleware</li>
+</ul>
+<h4 id="file-storage">File Storage</h4>
+<ul>
+<li><strong>Pillow 11.0.0</strong> - Image processing</li>
+<li><strong>Django Storage</strong> - File upload handling</li>
+</ul>
+<h4 id="task-queue">Task Queue</h4>
+<ul>
+<li><strong>Celery 5.4.0</strong> - Asynchronous task queue</li>
+<li><strong>Redis</strong> - Celery broker</li>
+</ul>
+<h4 id="api-documentation">API Documentation</h4>
+<ul>
+<li><strong>drf-spectacular 0.28.0</strong> - OpenAPI 3.0 schema
+generation</li>
+<li><strong>Swagger UI</strong> - Interactive API documentation</li>
+</ul>
+<h4 id="testing">Testing</h4>
+<ul>
+<li><strong>pytest</strong> - Testing framework</li>
+<li><strong>pytest-django</strong> - Django testing utilities</li>
+<li><strong>Coverage</strong> - Code coverage reporting</li>
+</ul>
+<h4 id="development-tools-1">Development Tools</h4>
+<ul>
+<li><strong>python-dotenv</strong> - Environment variable
+management</li>
+<li><strong>django-extensions</strong> - Development utilities</li>
+</ul>
+<hr />
+<h2 id="architecture">🏗️ Architecture</h2>
+<h3 id="system-architecture"><strong>System Architecture</strong></h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                        Client Layer                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │   Browser    │  │    Mobile    │  │   Desktop    │      │
+│  │   (Next.js)  │  │  (Responsive)│  │  (Responsive)│      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            │ HTTPS/WSS
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     Application Layer                        │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              Next.js Frontend (Port 3000)            │   │
+│  │  • Server-side Rendering (SSR)                       │   │
+│  │  • Client-side Routing                               │   │
+│  │  • API Route Handlers                                │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            │ REST API / WebSocket
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      Backend Layer                           │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │         Django REST API (Port 8000/8005)             │   │
+│  │  • RESTful Endpoints                                 │   │
+│  │  • JWT Authentication                                │   │
+│  │  • Business Logic                                    │   │
+│  │  • WebSocket (Django Channels)                       │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            │
+        ┌───────────────────┼───────────────────┐
+        │                   │                   │
+        ▼                   ▼                   ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│  PostgreSQL  │  │    Redis     │  │   Celery     │
+│   Database   │  │   Cache &amp;    │  │ Task Queue   │
+│              │  │   Channels   │  │              │
+└──────────────┘  └──────────────┘  └──────────────┘</code></pre>
+<hr />
+<h2 id="project-structure">📁 Project Structure</h2>
+<h3 id="frontend-structure"><strong>Frontend Structure</strong></h3>
+<pre><code>Apps/webapp/
+├── app/                          # Next.js App Router
+│   ├── account/                  # Account hub page
+│   ├── auth/                     # Authentication pages
+│   ├── chats/                    # Real-time chat interface
+│   ├── dashboard/                # User dashboard
+│   │   └── properties/           # Property management
+│   │       ├── add/              # Add property form
+│   │       └── page.tsx          # My properties list
+│   ├── profile/                  # User profile page
+│   ├── properties/               # Property listings
+│   │   ├── [id]/                 # Property detail page
+│   │   └── page.tsx              # Property search
+│   ├── signup/                   # Tenant signup
+│   ├── owner-signup/             # Owner signup
+│   ├── layout.tsx                # Root layout
+│   ├── page.tsx                  # Homepage
+│   └── globals.css               # Global styles
+├── src/
+│   ├── components/               # Reusable components
+│   │   ├── layout/               # Layout components
+│   │   ├── property/             # Property components
+│   │   └── providers/            # Context providers
+│   ├── hooks/                    # Custom React hooks
+│   ├── modules/                  # Feature modules
+│   │   ├── auth/                 # Authentication
+│   │   ├── communication/        # Chat system
+│   │   ├── contacts/             # Contact leads
+│   │   ├── favorites/            # Favorites
+│   │   └── properties/           # Properties
+│   ├── services/                 # API services
+│   │   ├── http.ts               # HTTP client
+│   │   └── websocket.ts          # WebSocket service
+│   ├── store/                    # Zustand stores
+│   ├── types/                    # TypeScript types
+│   └── lib/                      # Utility functions
+└── public/                       # Static assets</code></pre>
+<h3 id="backend-structure"><strong>Backend Structure</strong></h3>
+<pre><code>Server/
+├── apps/                         # Django apps
+│   ├── analytics/                # Analytics &amp; tracking
+│   ├── communication/            # Chat &amp; messaging
+│   │   ├── consumers.py          # WebSocket consumers
+│   │   ├── routing.py            # WebSocket routing
+│   │   ├── models.py             # Conversation &amp; Message
+│   │   ├── serializers.py        # API serializers
+│   │   ├── services.py           # Business logic
+│   │   └── views.py              # API views
+│   ├── contacts/                 # Contact leads
+│   ├── favorites/                # Favorites system
+│   ├── notifications/            # Notifications
+│   ├── properties/               # Property management
+│   │   ├── models.py             # Property model
+│   │   ├── serializers.py        # API serializers
+│   │   ├── services.py           # Business logic
+│   │   ├── filters.py            # Query filters
+│   │   └── views.py              # API views
+│   └── users/                    # User management
+├── core/                         # Core utilities
+│   ├── models.py                 # Base models
+│   ├── permissions.py            # Custom permissions
+│   ├── throttles.py              # Rate limiting
+│   └── exceptions.py             # Custom exceptions
+├── server/                       # Django settings
+│   ├── settings.py               # Configuration
+│   ├── urls.py                   # URL routing
+│   ├── asgi.py                   # ASGI config
+│   └── wsgi.py                   # WSGI config
+└── manage.py                     # Django CLI</code></pre>
+<hr />
+<h2 id="working-flow">🔄 Working Flow</h2>
+<h3 id="user-authentication-flow"><strong>1. User Authentication
+Flow</strong></h3>
+<pre><code>┌─────────────┐
+│   Landing   │
+│    Page     │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐     ┌──────────────┐
+│  Sign Up /  │────▶│   Firebase   │
+│  Sign In    │     │    OAuth     │
+└──────┬──────┘     └──────┬───────┘
+       │                   │
+       │◀──────────────────┘
+       │ (Google Token)
+       ▼
+┌─────────────┐
+│   Backend   │
+│  Validates  │
+│   Token     │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  JWT Token  │
+│  Generated  │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   Stored    │
+│  in Zustand │
+│   &amp; Cookie  │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Dashboard  │
+│  Redirect   │
+└─────────────┘</code></pre>
+<h3 id="property-listing-flow"><strong>2. Property Listing
+Flow</strong></h3>
+<pre><code>Owner Journey:
+┌─────────────┐
+│   Owner     │
+│  Dashboard  │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│ Add Property│
+│    Form     │
+│  (4 Steps)  │
+└──────┬──────┘
+       │
+       ├─ Step 1: Property Type &amp; Details
+       ├─ Step 2: Location (Create/Select)
+       ├─ Step 3: Pricing &amp; Amenities
+       └─ Step 4: Review &amp; Submit
+       │
+       ▼
+┌─────────────┐
+│   Backend   │
+│   Creates   │
+│  Property   │
+│ (DRAFT)     │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   Submit    │
+│     for     │
+│  Approval   │
+│ (PENDING)   │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│    Admin    │
+│  Activates  │
+│  Property   │
+│  (ACTIVE)   │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Visible    │
+│     to      │
+│   Tenants   │
+└─────────────┘</code></pre>
+<h3 id="property-search-flow"><strong>3. Property Search
+Flow</strong></h3>
+<pre><code>Tenant Journey:
+┌─────────────┐
+│   Browse    │
+│ Properties  │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   Search    │
+│   Filters   │
+│  Applied    │
+└──────┬──────┘
+       │
+       ├─ City
+       ├─ Property Type
+       ├─ Min/Max Rent
+       └─ Search Query
+       │
+       ▼
+┌─────────────┐
+│   Backend   │
+│   Filters   │
+│  &amp; Searches │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Property   │
+│    List     │
+│  Displayed  │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   Select    │
+│  Property   │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Property   │
+│   Detail    │
+│    Page     │
+└──────┬──────┘
+       │
+       ├─ Add to Favorites
+       └─ Chat with Owner</code></pre>
+<h3 id="real-time-chat-flow"><strong>4. Real-time Chat
+Flow</strong></h3>
+<pre><code>┌─────────────┐
+│   Tenant    │
+│   Clicks    │
+│&quot;Chat with   │
+│   Owner&quot;    │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   Create    │
+│Conversation │
+│  (REST API) │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Redirect   │
+│     to      │
+│ Chat Page   │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  WebSocket  │
+│ Connection  │
+│  Established│
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐     ┌──────────────┐
+│   Send      │────▶│   Django     │
+│  Message    │     │  Channels    │
+└─────────────┘     └──────┬───────┘
+       ▲                   │
+       │                   ▼
+       │            ┌──────────────┐
+       │            │    Redis     │
+       │            │  Broadcasts  │
+       │            └──────┬───────┘
+       │                   │
+       │                   ▼
+       │            ┌──────────────┐
+       └────────────│   Receive    │
+                    │   Message    │
+                    │ (Real-time)  │
+                    └──────────────┘</code></pre>
+<h3 id="favorites-flow"><strong>5. Favorites Flow</strong></h3>
+<pre><code>┌─────────────┐
+│   Tenant    │
+│   Clicks    │
+│   Heart     │
+│    Icon     │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  POST /api/ │
+│ favorites/  │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   Backend   │
+│   Creates   │
+│  Favorite   │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   Update    │
+│     UI      │
+│  (Filled    │
+│   Heart)    │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Visible    │
+│     in      │
+│  Dashboard  │
+│  Wishlist   │
+└─────────────┘</code></pre>
+<h3 id="analytics-flow"><strong>6. Analytics Flow</strong></h3>
+<pre><code>┌─────────────┐
+│    User     │
+│   Action    │
+└──────┬──────┘
+       │
+       ├─ Property View
+       ├─ Favorite Added
+       └─ Contact Created
+       │
+       ▼
+┌─────────────┐
+│   Backend   │
+│  Increments │
+│   Counters  │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Property   │
+│   Stats     │
+│   Updated   │
+└──────┬──────┘
+       │
+       ├─ total_views++
+       ├─ total_favorites++
+       └─ total_contacts++
+       │
+       ▼
+┌─────────────┐
+│   Owner     │
+│  Dashboard  │
+│   Shows     │
+│   Stats     │
+└─────────────┘</code></pre>
+<hr />
+<h2 id="security-features">🔐 Security Features</h2>
+<h3 id="authentication-authorization"><strong>Authentication &amp;
+Authorization</strong></h3>
+<ul>
+<li>JWT token-based authentication</li>
+<li>HTTP-only cookies for token storage</li>
+<li>Role-based access control (TENANT/OWNER)</li>
+<li>Protected routes with auth guards</li>
+<li>Token refresh mechanism</li>
+</ul>
+<h3 id="api-security"><strong>API Security</strong></h3>
+<ul>
+<li>CORS configuration</li>
+<li>Rate limiting (throttling)</li>
+<li>Input validation</li>
+<li>SQL injection prevention (ORM)</li>
+<li>XSS protection</li>
+</ul>
+<h3 id="websocket-security"><strong>WebSocket Security</strong></h3>
+<ul>
+<li>JWT authentication on connection</li>
+<li>User verification middleware</li>
+<li>Conversation access control</li>
+<li>Message validation</li>
+</ul>
+<h3 id="data-protection"><strong>Data Protection</strong></h3>
+<ul>
+<li>Password hashing (Django default)</li>
+<li>Sensitive data encryption</li>
+<li>Environment variable management</li>
+<li>Secure file uploads</li>
+</ul>
+<hr />
+<h2 id="key-features">🚀 Key Features</h2>
+<h3 id="for-tenants"><strong>For Tenants</strong></h3>
+<ul>
+<li>✅ Browse properties with advanced filters</li>
+<li>✅ Search by location, type, rent range</li>
+<li>✅ Save favorite properties</li>
+<li>✅ Real-time chat with owners</li>
+<li>✅ View property details &amp; images</li>
+<li>✅ Track inquiries and responses</li>
+<li>✅ Mobile-first responsive design</li>
+</ul>
+<h3 id="for-owners"><strong>For Owners</strong></h3>
+<ul>
+<li>✅ List properties (4-step form)</li>
+<li>✅ Manage property listings</li>
+<li>✅ View analytics (views, favorites, contacts)</li>
+<li>✅ Real-time chat with tenants</li>
+<li>✅ Mark properties as rented</li>
+<li>✅ Track property performance</li>
+<li>✅ Dashboard with insights</li>
+</ul>
+<h3 id="admin-features"><strong>Admin Features</strong></h3>
+<ul>
+<li>✅ Approve/reject property listings</li>
+<li>✅ Manage users</li>
+<li>✅ View system analytics</li>
+<li>✅ Moderate content</li>
+</ul>
+<hr />
+<h2 id="database-schema">📊 Database Schema</h2>
+<h3 id="core-models"><strong>Core Models</strong></h3>
+<h4 id="user"><strong>User</strong></h4>
+<ul>
+<li>id (UUID)</li>
+<li>email (unique)</li>
+<li>name</li>
+<li>phone</li>
+<li>role (TENANT/OWNER)</li>
+<li>location (FK)</li>
+<li>created_at, updated_at</li>
+</ul>
+<h4 id="property"><strong>Property</strong></h4>
+<ul>
+<li>id (UUID)</li>
+<li>owner (FK → User)</li>
+<li>location (FK → Location)</li>
+<li>title</li>
+<li>description</li>
+<li>property_type</li>
+<li>rent</li>
+<li>furnishing</li>
+<li>status (DRAFT/PENDING/ACTIVE/RENTED)</li>
+<li>total_views, total_favorites, total_contacts</li>
+<li>created_at, updated_at</li>
+</ul>
+<h4 id="conversation"><strong>Conversation</strong></h4>
+<ul>
+<li>id (UUID)</li>
+<li>property (FK → Property)</li>
+<li>tenant (FK → User)</li>
+<li>owner (FK → User)</li>
+<li>status (ACTIVE/ARCHIVED)</li>
+<li>message_count</li>
+<li>owner_unread_count, tenant_unread_count</li>
+<li>last_message_at</li>
+</ul>
+<h4 id="message"><strong>Message</strong></h4>
+<ul>
+<li>id (UUID)</li>
+<li>conversation (FK → Conversation)</li>
+<li>sender (FK → User)</li>
+<li>message_type (TEXT/IMAGE/SYSTEM)</li>
+<li>content</li>
+<li>is_read</li>
+<li>created_at</li>
+</ul>
+<h4 id="favorite"><strong>Favorite</strong></h4>
+<ul>
+<li>id (UUID)</li>
+<li>user (FK → User)</li>
+<li>property (FK → Property)</li>
+<li>created_at</li>
+</ul>
+<hr />
+<h2 id="environment-configuration">🔧 Environment Configuration</h2>
+<h3 id="frontend-.env.local"><strong>Frontend (.env.local)</strong></h3>
+<pre class="env"><code>NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id</code></pre>
+<h3 id="backend-.env"><strong>Backend (.env)</strong></h3>
+<pre class="env"><code>DEBUG=True
+SECRET_KEY=your_secret_key
+DATABASE_URL=postgresql://user:pass@localhost:5432/gharbazar
+REDIS_URL=redis://localhost:6379/0
+FIREBASE_CREDENTIALS_PATH=config/firebase-admin.json
+ALLOWED_HOSTS=localhost,127.0.0.1
+CORS_ALLOWED_ORIGINS=http://localhost:3000</code></pre>
+<hr />
+<h2 id="deployment">🚀 Deployment</h2>
+<h3 id="frontend-deployment-vercel"><strong>Frontend Deployment
+(Vercel)</strong></h3>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Build</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run build</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Deploy</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="ex">vercel</span> <span class="at">--prod</span></span></code></pre></div>
+<h3 id="backend-deployment-railwayheroku"><strong>Backend Deployment
+(Railway/Heroku)</strong></h3>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Collect static files</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> manage.py collectstatic</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Run migrations</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> manage.py migrate</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Start server</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="ex">daphne</span> <span class="at">-b</span> 0.0.0.0 <span class="at">-p</span> <span class="va">$PORT</span> server.asgi:application</span></code></pre></div>
+<h3 id="required-services"><strong>Required Services</strong></h3>
+<ul>
+<li>PostgreSQL database</li>
+<li>Redis server</li>
+<li>Celery worker</li>
+<li>File storage (AWS S3/Cloudinary)</li>
+</ul>
+<hr />
+<h2 id="performance-optimizations">📈 Performance Optimizations</h2>
+<h3 id="frontend"><strong>Frontend</strong></h3>
+<ul>
+<li>Server-side rendering (SSR)</li>
+<li>Image optimization</li>
+<li>Code splitting</li>
+<li>Lazy loading</li>
+<li>React Query caching</li>
+<li>Debounced search</li>
+</ul>
+<h3 id="backend"><strong>Backend</strong></h3>
+<ul>
+<li>Database indexing</li>
+<li>Query optimization</li>
+<li>Redis caching</li>
+<li>Connection pooling</li>
+<li>Pagination</li>
+<li>Async tasks (Celery)</li>
+</ul>
+<hr />
+<h2 id="testing-1">🧪 Testing</h2>
+<h3 id="frontend-tests"><strong>Frontend Tests</strong></h3>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> test</span></code></pre></div>
+<h3 id="backend-tests"><strong>Backend Tests</strong></h3>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> manage.py test</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pytest</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="ex">coverage</span> run <span class="at">-m</span> pytest</span></code></pre></div>
+<hr />
+<h2 id="api-documentation-1">📝 API Documentation</h2>
+<p>Interactive API documentation available at: - <strong>Swagger
+UI</strong>: <code>http://localhost:8000/api/schema/swagger-ui/</code> -
+<strong>ReDoc</strong>:
+<code>http://localhost:8000/api/schema/redoc/</code> - <strong>OpenAPI
+Schema</strong>: <code>http://localhost:8000/api/schema/</code></p>
+<hr />
+<h2 id="contributing">🤝 Contributing</h2>
+<ol type="1">
+<li>Fork the repository</li>
+<li>Create feature branch
+(<code>git checkout -b feature/amazing-feature</code>)</li>
+<li>Commit changes
+(<code>git commit -m 'Add amazing feature'</code>)</li>
+<li>Push to branch
+(<code>git push origin feature/amazing-feature</code>)</li>
+<li>Open Pull Request</li>
+</ol>
+<hr />
+<h2 id="license">📄 License</h2>
+<p>This project is proprietary and confidential.</p>
+<hr />
+<h2 id="team">👥 Team</h2>
+<ul>
+<li><strong>Developer</strong>: Durgesh</li>
+<li><strong>Project</strong>: GharBazar Property Rental Marketplace</li>
+<li><strong>Year</strong>: 2025</li>
+</ul>
+<hr />
+<h2 id="support">📞 Support</h2>
+<p>For issues or questions: - Check documentation - Review API docs -
+Check server logs - Review browser console</p>
+<hr />
+<p><strong>Last Updated</strong>: January 2025<br />
+<strong>Version</strong>: 1.0.0<br />
+<strong>Status</strong>: ✅ Production Ready</p>

@@ -1,0 +1,362 @@
+[
+  {
+    "title": "Spacious 2BHK in Shastri Nagar",
+    "description": "Well-ventilated 2BHK with modular kitchen and balcony.",
+    "property_type": "2BHK",
+    "furnishing": "FURNISHED",
+    "rent": 15000,
+    "deposit": 30000,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "area_sqft": 1200,
+    "preferred_tenant": "FAMILY",
+    "location": {
+      "area": "Shastri Nagar",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250004"
+    }
+  },
+  {
+    "title": "Modern 2BHK in Ganga Nagar",
+    "description": "Apartment with lift, parking and 24/7 water supply.",
+    "property_type": "2BHK",
+    "furnishing": "SEMI_FURNISHED",
+    "rent": 14000,
+    "deposit": 28000,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "area_sqft": 1100,
+    "preferred_tenant": "ANY",
+    "location": {
+      "area": "Ganga Nagar",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250001"
+    }
+  },
+  {
+    "title": "Premium 3BHK in Pallavpuram",
+    "description": "Spacious flat with modern interiors and security.",
+    "property_type": "3BHK",
+    "furnishing": "FURNISHED",
+    "rent": 22000,
+    "deposit": 44000,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "area_sqft": 1600,
+    "preferred_tenant": "FAMILY",
+    "location": {
+      "area": "Pallavpuram",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250110"
+    }
+  },
+  {
+    "title": "Cozy 1BHK in Jagriti Vihar",
+    "description": "Compact flat ideal for working professionals.",
+    "property_type": "1BHK",
+    "furnishing": "SEMI_FURNISHED",
+    "rent": 9000,
+    "deposit": 18000,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "area_sqft": 650,
+    "preferred_tenant": "BACHELOR",
+    "location": {
+      "area": "Jagriti Vihar",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250004"
+    }
+  },
+  {
+    "title": "Luxury 4BHK in Civil Lines",
+    "description": "Independent floor with parking and terrace access.",
+    "property_type": "4BHK",
+    "furnishing": "FURNISHED",
+    "rent": 35000,
+    "deposit": 70000,
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "area_sqft": 2400,
+    "preferred_tenant": "FAMILY",
+    "location": {
+      "area": "Civil Lines",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250001"
+    }
+  },
+  {
+    "title": "Affordable 2BHK in Modipuram",
+    "description": "Budget-friendly flat near main road.",
+    "property_type": "2BHK",
+    "furnishing": "UNFURNISHED",
+    "rent": 11000,
+    "deposit": 22000,
+    "bedrooms": 2,
+    "bathrooms": 1,
+    "area_sqft": 1000,
+    "preferred_tenant": "ANY",
+    "location": {
+      "area": "Modipuram",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250110"
+    }
+  },
+  {
+    "title": "Elegant 3BHK in Saket",
+    "description": "Spacious rooms with modern fittings.",
+    "property_type": "3BHK",
+    "furnishing": "SEMI_FURNISHED",
+    "rent": 20000,
+    "deposit": 40000,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "area_sqft": 1500,
+    "preferred_tenant": "FAMILY",
+    "location": {
+      "area": "Saket",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250003"
+    }
+  },
+  {
+    "title": "Compact 1BHK in Kanker Khera",
+    "description": "Ideal for singles, near market and bus stand.",
+    "property_type": "1BHK",
+    "furnishing": "FURNISHED",
+    "rent": 8500,
+    "deposit": 17000,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "area_sqft": 600,
+    "preferred_tenant": "ANY",
+    "location": {
+      "area": "Kanker Khera",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250001"
+    }
+  },
+  {
+    "title": "Family 2BHK in Lalkurti",
+    "description": "Peaceful locality with park nearby.",
+    "property_type": "2BHK",
+    "furnishing": "SEMI_FURNISHED",
+    "rent": 13500,
+    "deposit": 27000,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "area_sqft": 1050,
+    "preferred_tenant": "FAMILY",
+    "location": {
+      "area": "Lalkurti",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250001"
+    }
+  },
+  {
+    "title": "Modern Studio in Partapur",
+    "description": "Studio apartment with attached bathroom.",
+    "property_type": "STUDIO",
+    "furnishing": "FURNISHED",
+    "rent": 7000,
+    "deposit": 14000,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "area_sqft": 500,
+    "preferred_tenant": "BACHELOR",
+    "location": {
+      "area": "Partapur",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250103"
+    }
+  },
+  {
+    "title": "Spacious 3BHK in Defence Colony",
+    "description": "Premium society with security and parking.",
+    "property_type": "3BHK",
+    "furnishing": "FURNISHED",
+    "rent": 25000,
+    "deposit": 50000,
+    "bedrooms": 3,
+    "bathrooms": 3,
+    "area_sqft": 1800,
+    "preferred_tenant": "FAMILY",
+    "location": {
+      "area": "Defence Colony",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250001"
+    }
+  },
+  {
+    "title": "Affordable 2BHK in Rohta Road",
+    "description": "Good connectivity and schools nearby.",
+    "property_type": "2BHK",
+    "furnishing": "UNFURNISHED",
+    "rent": 12000,
+    "deposit": 24000,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "area_sqft": 980,
+    "preferred_tenant": "ANY",
+    "location": {
+      "area": "Rohta Road",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250002"
+    }
+  },
+  {
+    "title": "Luxury 3BHK in Garh Road",
+    "description": "Close to hospitals and shopping complexes.",
+    "property_type": "3BHK",
+    "furnishing": "SEMI_FURNISHED",
+    "rent": 23000,
+    "deposit": 46000,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "area_sqft": 1650,
+    "preferred_tenant": "FAMILY",
+    "location": {
+      "area": "Garh Road",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250004"
+    }
+  },
+  {
+    "title": "Budget 1BHK in Brahmpuri",
+    "description": "Affordable flat near local market.",
+    "property_type": "1BHK",
+    "furnishing": "UNFURNISHED",
+    "rent": 8000,
+    "deposit": 16000,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "area_sqft": 550,
+    "preferred_tenant": "ANY",
+    "location": {
+      "area": "Brahmpuri",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250002"
+    }
+  },
+  {
+    "title": "Independent 2BHK in Lisari Gate",
+    "description": "Ground floor house with separate entry.",
+    "property_type": "2BHK",
+    "furnishing": "SEMI_FURNISHED",
+    "rent": 13000,
+    "deposit": 26000,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "area_sqft": 1100,
+    "preferred_tenant": "FAMILY",
+    "location": {
+      "area": "Lisari Gate",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250002"
+    }
+  },
+  {
+    "title": "Premium 4BHK in Abu Lane",
+    "description": "Prime location with spacious interiors.",
+    "property_type": "4BHK",
+    "furnishing": "FURNISHED",
+    "rent": 36000,
+    "deposit": 72000,
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "area_sqft": 2500,
+    "preferred_tenant": "FAMILY",
+    "location": {
+      "area": "Abu Lane",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250001"
+    }
+  },
+  {
+    "title": "Comfort 2BHK in Surya Palace Colony",
+    "description": "Well-maintained society with parking.",
+    "property_type": "2BHK",
+    "furnishing": "SEMI_FURNISHED",
+    "rent": 14500,
+    "deposit": 29000,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "area_sqft": 1150,
+    "preferred_tenant": "ANY",
+    "location": {
+      "area": "Surya Palace Colony",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250001"
+    }
+  },
+  {
+    "title": "Studio Apartment in Mangal Pandey Nagar",
+    "description": "Ideal for students and working professionals.",
+    "property_type": "STUDIO",
+    "furnishing": "FURNISHED",
+    "rent": 7500,
+    "deposit": 15000,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "area_sqft": 480,
+    "preferred_tenant": "BACHELOR",
+    "location": {
+      "area": "Mangal Pandey Nagar",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250001"
+    }
+  },
+  {
+    "title": "Family 3BHK in Sharda Road",
+    "description": "Spacious flat with balcony and park view.",
+    "property_type": "3BHK",
+    "furnishing": "SEMI_FURNISHED",
+    "rent": 21000,
+    "deposit": 42000,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "area_sqft": 1550,
+    "preferred_tenant": "FAMILY",
+    "location": {
+      "area": "Sharda Road",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250002"
+    }
+  },
+  {
+    "title": "Affordable 2BHK in Delhi Road",
+    "description": "Close to highway and commercial areas.",
+    "property_type": "2BHK",
+    "furnishing": "UNFURNISHED",
+    "rent": 12500,
+    "deposit": 25000,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "area_sqft": 1020,
+    "preferred_tenant": "ANY",
+    "location": {
+      "area": "Delhi Road",
+      "city": "Meerut",
+      "state": "Uttar Pradesh",
+      "pincode": "250002"
+    }
+  }
+]

@@ -1,0 +1,15 @@
+[run]
+source =
+    apps
+    core
+omit =
+    */migrations/*
+    */tests.py
+    */__init__.py
+
+[report]
+include =
+    apps/*/services.py
+    core/services.py
+show_missing = True
+fail_under = 70

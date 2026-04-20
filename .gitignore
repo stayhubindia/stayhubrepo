@@ -1,0 +1,95 @@
+# ── Secrets & Environment ──────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.env
+!*.env.example
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+.Python
+
+# ── Node / Next.js ────────────────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+build/
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+*.tsbuildinfo
+.vercel
+
+# ── Flutter / Dart ────────────────────────────────────────────────────────────
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/Apps/stayhub/build/
+/Apps/stayhub/coverage/
+*.class
+*.log
+*.pyc
+*.swp
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+# Android signing
+/Apps/stayhub/android/key.properties
+/Apps/stayhub/android/app/*.jks
+/Apps/stayhub/android/app/*.keystore
+# Firebase config (contains API keys)
+/Apps/stayhub/android/app/google-services.json
+/Apps/stayhub/android/google-services.json
+/Apps/stayhub/ios/Runner/GoogleService-Info.plist
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+*.swo
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Database ──────────────────────────────────────────────────────────────────
+*.sqlite3
+db.sqlite3
+
+# ── Django ────────────────────────────────────────────────────────────────────
+staticfiles/
+media/
+htmlcov/
+.coverage
+
+# ── Reference & Design Files (not needed in source control) ──────────────────
+Reference/
+Assest/
+*.pptx
+*.ppt
+
+# ── Generated / local files ───────────────────────────────────────────────────
+Memory/
+ServerCOMMAND.txt

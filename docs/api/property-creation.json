@@ -1,0 +1,13 @@
+{
+  "title": "Spacious 2BHK in Green Park",
+  "description": "Beautiful apartment with modern amenities",
+  "property_type": "2BHK",
+  "furnishing": "FURNISHED",
+  "rent": 15000,
+  "deposit": 30000,
+  "bedrooms": 2,
+  "bathrooms": 2,
+  "area_sqft": 1200,
+  "preferred_tenant": "ANY",
+  "location_id": "550e8400-e29b-41d4-a716-446655440000"
+}
