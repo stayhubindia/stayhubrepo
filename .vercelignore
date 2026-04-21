@@ -7,4 +7,7 @@ Reference
 README*
 ServerCOMMAND.txt
 *.md
-!Apps/webapp/**
+Apps/stayhub/**
+node_modules
+.git
+*.log
