@@ -207,7 +207,6 @@ http.interceptors.request.use(async (config) => {
       const signed = await signRequest(config.method ?? "get", fullUrl.pathname, APP_SECRET);
       if (signed) {
         config.headers["X-App-Signature"] = signed["X-App-Signature"];
-        config.headers["X-Timestamp"] = signed["X-Timestamp"];
       }
     } catch {
       // Non-fatal — skip signing rather than blocking the request.

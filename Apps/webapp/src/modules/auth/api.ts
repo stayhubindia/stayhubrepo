@@ -1,8 +1,6 @@
 import { http } from "@/services/http";
 import type { AuthResponse, AuthTokens, AppUser } from "@/types/auth";
 import type { RequestEmailOtpInput, VerifyEmailOtpInput } from "./schemas";
-import axios from "axios";
-import { API_BASE_URL } from "@/config/env";
 
 export const requestEmailOtp = async (payload: RequestEmailOtpInput): Promise<{ detail: string }> => {
   const response = await http.post<{ detail: string }>("/auth/email-otp/request/", payload);
@@ -20,7 +18,7 @@ export const loginWithGoogle = async (idToken: string, role: "TENANT" | "OWNER")
 };
 
 export const refreshAuthToken = async (refresh: string): Promise<AuthTokens> => {
-  const response = await axios.post<AuthTokens>(`${API_BASE_URL}/auth/token/refresh/`, { refresh }, { timeout: 15000 });
+  const response = await http.post<AuthTokens>("/auth/token/refresh/", { refresh });
   return response.data;
 };
 

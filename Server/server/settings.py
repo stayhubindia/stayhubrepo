@@ -271,7 +271,6 @@ CORS_ALLOW_HEADERS = [
     "x-client-version",
     # Security headers added by ClientVerificationMiddleware
     "x-app-signature",   # HMAC-SHA256 request signature
-    "x-timestamp",       # Unix epoch (embedded in signature)
     "x-device-id",       # Stable browser/device identifier
 ]
 

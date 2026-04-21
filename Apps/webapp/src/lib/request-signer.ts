@@ -43,7 +43,6 @@ function _bufToHex(buf: ArrayBuffer): string {
 
 export type SignedHeaders = {
   "X-App-Signature": string;
-  "X-Timestamp": string;
 };
 
 /**
@@ -68,7 +67,6 @@ export async function signRequest(
     const sig = await crypto.subtle.sign("HMAC", key, _enc.encode(message));
     return {
       "X-App-Signature": `${timestamp}.${_bufToHex(sig)}`,
-      "X-Timestamp": timestamp,
     };
   } catch {
     // crypto.subtle not available on HTTP / very old browsers — fail open.

@@ -58,7 +58,7 @@ EXEMPT_PATHS: frozenset[str] = frozenset({
     "/api/v1/auth/firebase/link/",      # Link Google to existing account
     "/api/v1/auth/email-otp/request/",  # Request email OTP
     "/api/v1/auth/email-otp/verify/",   # Verify email OTP
-    "/api/v1/auth/token/refresh/",      # JWT refresh (raw axios, no interceptor)
+    "/api/v1/auth/token/refresh/",      # JWT refresh
 })
 
 # Per-IP sliding-window limit.  Overridden by settings if present.
