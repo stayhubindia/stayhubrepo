@@ -380,12 +380,25 @@ class UserService:
         existing_user: User, uid: str, phone: str | None, is_verified: bool, role: str | None
     ) -> User:
         """Auto-link a Firebase UID to an existing email account or raise on conflict."""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"Attempting to link Firebase UID to existing user - user_id: {existing_user.id}, existing_firebase_uid: {existing_user.firebase_uid}, new_uid: {uid}")
+        
         UserService._assert_role_match(existing_user, role)
-        if existing_user.firebase_uid:
-            raise ValidationError("This email is linked to a different Google account.")
+        
+        if existing_user.firebase_uid and existing_user.firebase_uid != uid:
+            logger.error(f"Firebase UID mismatch - existing: {existing_user.firebase_uid}, new: {uid}")
+            raise ValidationError(
+                "This email is already linked to a different Google account. "
+                "If you want to switch Google accounts, please contact support or use the account linking feature."
+            )
 
-        changed_fields = ["firebase_uid"]
-        existing_user.firebase_uid = uid
+        changed_fields = []
+        if existing_user.firebase_uid != uid:
+            logger.info(f"Linking Firebase UID {uid} to user {existing_user.id}")
+            existing_user.firebase_uid = uid
+            changed_fields.append("firebase_uid")
 
         if phone and existing_user.phone != phone:
             UserService._ensure_unique_identity(phone=phone, exclude_user_id=existing_user.id)
@@ -418,14 +431,20 @@ class UserService:
         uid: str, email: str | None, phone: str | None, is_verified: bool, role: str | None
     ) -> User:
         """Resolve or create a user for a Firebase UID that doesn't exist yet."""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         if not email and not phone:
             raise FirebaseAuthError("Firebase identity must include email or phone")
 
         if email:
             existing_user = User.objects.filter(email=email).first()
+            logger.info(f"Checking for existing user with email={email}: {'found' if existing_user else 'not found'}")
             if existing_user:
+                logger.info(f"Existing user found - firebase_uid: {existing_user.firebase_uid}, role: {existing_user.role}")
                 return UserService._link_existing_email_user(existing_user, uid, phone, is_verified, role)
 
+        logger.info(f"Creating new Firebase user - email: {email}, role: {role}")
         return UserService._create_firebase_user(email, phone, uid, role, is_verified)
 
     @staticmethod
@@ -461,7 +480,11 @@ class UserService:
         role: str | None = None,
         remember_me: bool = False,
     ) -> tuple[User, AuthTokens]:
+        import logging
+        logger = logging.getLogger(__name__)
+        
         claims = UserService.verify_firebase_token(firebase_token)
+        logger.info(f"Firebase claims verified - uid: {claims.get('uid')}, email: {claims.get('email')}")
 
         uid = claims.get("uid")
         if not uid:
@@ -477,9 +500,13 @@ class UserService:
             raise ValidationError("Disposable email addresses are not allowed")
 
         user = User.objects.filter(firebase_uid=uid).first()
+        logger.info(f"User lookup by firebase_uid={uid}: {'found' if user else 'not found'}")
+        
         if user is None:
+            logger.info(f"Resolving new Firebase user - email: {email}, role: {role}")
             user = UserService._resolve_new_firebase_user(uid, email, phone, is_verified, role)
         else:
+            logger.info(f"Syncing existing Firebase user - current role: {user.role}, requested role: {role}")
             user = UserService._sync_existing_firebase_user(user, email, phone, is_verified, role)
 
         return user, UserService._issue_tokens(user, remember_me=remember_me)

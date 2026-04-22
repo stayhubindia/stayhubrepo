@@ -241,7 +241,9 @@ export default function AuthPage() {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const idToken = await result.user.getIdToken();
+      console.log("[DEBUG] Sending Google login request:", { role, tokenLength: idToken.length });
       const data = await googleLoginMutation.mutateAsync({ idToken, role });
+      console.log("[DEBUG] Google login successful:", data);
       setSession(data.user, data.tokens);
       if (role === "OWNER" && !data.user.phone) {
         router.push("/owner-onboarding");
@@ -249,8 +251,11 @@ export default function AuthPage() {
         router.push("/dashboard");
       }
     } catch (error) {
+      console.error("[DEBUG] Google login error:", error);
       const err = error as { response?: { data?: { detail?: string; firebase_token?: string[] } } };
-      setFormError(err?.response?.data?.detail || err?.response?.data?.firebase_token?.[0] || getApiErrorMessage(error));
+      const errorMsg = err?.response?.data?.detail || err?.response?.data?.firebase_token?.[0] || getApiErrorMessage(error);
+      console.error("[DEBUG] Error message:", errorMsg);
+      setFormError(errorMsg);
     }
   };
 

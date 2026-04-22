@@ -24,17 +24,28 @@ class FirebaseLoginAPIView(APIView):
 
     @extend_schema(request=FirebaseLoginSerializer, responses={200: UserProfileSerializer})
     def post(self, request):
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        print(f"[DEBUG] Firebase login POST received - data: {request.data}")
+        logger.info(f"Firebase login request received - data keys: {list(request.data.keys())}")
+        
         serializer = FirebaseLoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            logger.error(f"Firebase login serializer validation failed: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         try:
+            logger.info(f"Firebase login attempt - role: {serializer.validated_data.get('role')}")
             user, tokens = UserService.login_with_firebase(
                 firebase_token=serializer.validated_data["firebase_token"],
                 role=serializer.validated_data.get("role"),
                 remember_me=serializer.validated_data.get("remember_me", False),
             )
+            logger.info(f"Firebase login successful - user: {user.email}, role: {user.role}")
         except PermissionDenied as e:
             error_msg = str(e) if str(e) else "Permission denied"
+            logger.error(f"Firebase login PermissionDenied: {error_msg}")
             return Response({"detail": error_msg}, status=status.HTTP_400_BAD_REQUEST)
         except ValidationError as e:
             if hasattr(e, 'detail'):
@@ -48,10 +59,15 @@ class FirebaseLoginAPIView(APIView):
                     error_msg = str(e.detail)
             else:
                 error_msg = str(e)
+            logger.error(f"Firebase login ValidationError: {error_msg}")
             return Response({"detail": error_msg}, status=status.HTTP_400_BAD_REQUEST)
         except FirebaseAuthError as e:
             error_msg = str(e.detail) if hasattr(e, 'detail') else str(e)
+            logger.error(f"Firebase login FirebaseAuthError: {error_msg}")
             return Response({"detail": error_msg}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.exception(f"Firebase login unexpected error: {str(e)}")
+            return Response({"detail": "An unexpected error occurred"}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(
             {
