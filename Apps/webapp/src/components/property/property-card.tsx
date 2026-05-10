@@ -1,4 +1,4 @@
-import { Building2, CalendarClock, Eye, Heart, MapPin, MessageCircle } from "lucide-react";
+import { Eye, Heart, MapPin, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -14,32 +14,24 @@ interface PropertyCardProps {
   onToggleFavorite?: (propertyId: string, nextState: boolean) => void;
 }
 
-const formatCurrency = (value: string) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(Number(value));
-
-const formatDate = (value: string | null) => {
-  if (!value) return null;
-  const date = new Date(value);
-  return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-};
-
-const STATUS_STYLES: Record<PropertyListItem["status"], string> = {
-  DRAFT: "border-slate-200 bg-slate-100 text-slate-700",
-  PENDING: "border-amber-200 bg-amber-50 text-amber-700",
-  ACTIVE: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  RENTED: "border-indigo-200 bg-indigo-50 text-indigo-700",
-  EXPIRED: "border-rose-200 bg-rose-50 text-rose-700",
-  REJECTED: "border-red-200 bg-red-50 text-red-700",
-};
-
 const FURNISHING_LABELS: Record<PropertyListItem["furnishing"], string> = {
   FURNISHED: "Furnished",
   SEMI: "Semi-furnished",
   UNFURNISHED: "Unfurnished",
+};
+
+const TYPE_GRADIENTS: Record<string, string> = {
+  PG:         "from-blue-500 to-indigo-600",
+  "1RK":      "from-violet-500 to-purple-600",
+  "1BHK":     "from-rose-500 to-pink-600",
+  "2BHK":     "from-emerald-500 to-teal-600",
+  "3BHK":     "from-amber-500 to-orange-600",
+  HOUSE:      "from-teal-500 to-cyan-600",
+  COMMERCIAL: "from-slate-500 to-slate-700",
+};
+
+const TYPE_ICONS: Record<string, string> = {
+  PG: "🏠", "1RK": "🛏️", "1BHK": "🏢", "2BHK": "🏡", "3BHK": "🏡", HOUSE: "🏰", COMMERCIAL: "🏬",
 };
 
 export function PropertyCard({ property, isFavorite = false, canFavorite = false, onToggleFavorite }: PropertyCardProps) {
@@ -59,122 +51,98 @@ export function PropertyCard({ property, isFavorite = false, canFavorite = false
     }
   };
 
-  const availableFrom = formatDate(property.available_from);
+  const grad = TYPE_GRADIENTS[property.property_type] ?? "from-slate-400 to-slate-500";
+  const icon = TYPE_ICONS[property.property_type] ?? "🏠";
 
   return (
-    <article className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100/50">
-      <div className="h-1.5 bg-gradient-to-r from-indigo-500 via-sky-500 to-cyan-500" />
-
-      <div className="p-4 sm:p-5">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="mb-1 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
-                {property.property_type}
-              </span>
-              {property.is_featured ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-semibold text-violet-700">
-                  <Building2 className="h-3 w-3" />
-                  Featured
-                </span>
-              ) : null}
-            </div>
-
-            <Link
-              href={`/properties/${property.id}`}
-              className="line-clamp-1 text-base font-bold tracking-tight text-slate-900 transition-colors group-hover:text-indigo-700"
-            >
-              {property.title}
-            </Link>
-            <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
-              <MapPin className="h-3.5 w-3.5" />
-              {property.locality || property.city}
-            </p>
+    <Link href={`/properties/${property.id}`} className="group block">
+      <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 hover:border-emerald-300 hover:shadow-xl shadow-sm transition-all duration-300 hover:-translate-y-1">
+        {/* Image / placeholder with gradient */}
+        <div className={`h-44 bg-gradient-to-br ${grad} relative flex flex-col justify-between p-4`}>
+          {/* Top badges */}
+          <div className="flex items-start justify-between">
+            <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-2.5 py-1 rounded-full">
+              {property.property_type}
+            </span>
+            {canFavorite && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  onToggleFavorite?.(property.id, !isFavorite);
+                }}
+                className="w-8 h-8 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
+              >
+                <Heart className={`w-4 h-4 text-white ${isFavorite ? "fill-white" : ""}`} />
+              </button>
+            )}
           </div>
 
-          <div className="flex items-center gap-2">
-            {canFavorite ? (
-              <button
-                type="button"
-                aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-                className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-all ${
-                  isFavorite
-                    ? "border-rose-200 bg-rose-50 text-rose-600"
-                    : "border-slate-200 bg-white text-slate-500 hover:border-indigo-200 hover:text-indigo-600"
-                }`}
-                onClick={() => onToggleFavorite?.(property.id, !isFavorite)}
-              >
-                <Heart className={`h-4 w-4 ${isFavorite ? "fill-current" : ""}`} />
-              </button>
-            ) : null}
+          {/* Central icon */}
+          <div className="absolute inset-0 flex items-center justify-center opacity-25 text-7xl select-none pointer-events-none">{icon}</div>
+
+          {/* Bottom: rent */}
+          <div>
+            <p className="text-white font-black text-2xl leading-none">
+              ₹{Number(property.rent).toLocaleString("en-IN")}
+              <span className="text-sm font-normal text-white/80 ml-1">/mo</span>
+            </p>
           </div>
         </div>
 
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <p className="text-2xl font-extrabold tracking-tight text-slate-900">
-            {formatCurrency(property.rent)}
-            <span className="ml-1 text-sm font-semibold text-slate-500">/ month</span>
+        {/* Body */}
+        <div className="p-4">
+          <h3 className="font-semibold text-slate-900 line-clamp-1 group-hover:text-emerald-700 transition-colors mb-1">
+            {property.title}
+          </h3>
+
+          <p className="text-sm text-slate-500 flex items-center gap-1 mb-3">
+            <MapPin className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{property.locality}, {property.city}</span>
           </p>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${STATUS_STYLES[property.status]}`}>
-              {property.status}
-            </span>
-            <span className="inline-flex rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-700">
-              {FURNISHING_LABELS[property.furnishing]}
-            </span>
-            {availableFrom ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-semibold text-sky-700">
-                <CalendarClock className="h-3 w-3" />
-                From {availableFrom}
+          {/* Furnishing and featured badges */}
+          <div className="flex items-center gap-2 mb-3">
+            {property.furnishing && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                {FURNISHING_LABELS[property.furnishing]}
               </span>
-            ) : null}
+            )}
+            {property.is_featured && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">⭐ Featured</span>
+            )}
           </div>
-        </div>
 
-        <div className="grid grid-cols-3 gap-2.5 mb-4">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
-            <p className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500">
-              <Eye className="h-3.5 w-3.5" /> Views
-            </p>
-            <p className="mt-0.5 text-sm font-bold text-slate-900">{property.total_views}</p>
+          {/* Stats row */}
+          <div className="flex items-center gap-4 pt-3 border-t border-slate-100 text-xs text-slate-400">
+            <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" />{property.total_views}</span>
+            <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" />{property.total_favorites}</span>
+            <span className="flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" />{property.total_contacts}</span>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
-            <p className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500">
-              <Heart className="h-3.5 w-3.5" /> Saves
-            </p>
-            <p className="mt-0.5 text-sm font-bold text-slate-900">{property.total_favorites}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
-            <p className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500">
-              <MessageCircle className="h-3.5 w-3.5" /> Enquiries
-            </p>
-            <p className="mt-0.5 text-sm font-bold text-slate-900">{property.total_contacts}</p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/properties/${property.id}`}
-            className="inline-flex flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-indigo-200 hover:text-indigo-700"
-          >
-            View Details
-          </Link>
-
-          {canContact ? (
+          {/* Action buttons */}
+          <div className="flex gap-2 mt-4">
             <button
-              onClick={handleContact}
-              disabled={createConversationMutation.isPending}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-sky-500 px-3 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-500/25 transition-all hover:from-indigo-700 hover:to-sky-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex-1 px-3 py-2 rounded-lg border border-slate-200 text-slate-700 font-medium text-sm hover:bg-slate-50 transition-colors"
+              onClick={(e) => e.preventDefault()}
             >
-              <MessageCircle className="w-4 h-4" />
-              {createConversationMutation.isPending ? "Opening..." : "Chat with Owner"}
+              View Details
             </button>
-          ) : (
-            <div className="flex-1" />
-          )}
+            {canContact && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleContact(e);
+                }}
+                disabled={createConversationMutation.isPending}
+                className="flex-1 px-3 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-medium text-sm hover:from-emerald-600 hover:to-teal-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <MessageCircle className="w-4 h-4" />
+                {createConversationMutation.isPending ? "..." : "Chat"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
-    </article>
+    </Link>
   );
 }

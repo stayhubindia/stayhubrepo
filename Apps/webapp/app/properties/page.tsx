@@ -1,12 +1,13 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   Search, SlidersHorizontal, X, MapPin, IndianRupee,
   Building2, ChevronLeft, ChevronRight, Loader2, Crosshair,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 
 import { PropertyCard } from "@/components/property/property-card";
 import { useIdempotentAction } from "@/hooks/use-idempotent-action";
@@ -38,6 +39,28 @@ const initialFilters: PropertyListQuery = {
   max_rent: undefined,
 };
 
+const readFiltersFromSearchParams = (params: URLSearchParams): PropertyListQuery => {
+  const numberParam = (key: string) => {
+    const value = params.get(key);
+    if (!value) return undefined;
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
+  return {
+    ...initialFilters,
+    q: params.get("q") ?? params.get("search") ?? "",
+    city: params.get("city") ?? "",
+    state: params.get("state") ?? "",
+    locality: params.get("locality") ?? "",
+    property_type: params.get("property_type") ?? params.get("type") ?? "",
+    furnishing: params.get("furnishing") ?? "",
+    min_rent: numberParam("min_rent"),
+    max_rent: numberParam("max_rent"),
+  };
+};
+
 const DEFAULT_MAP_CENTER = { lat: 20.5937, lng: 78.9629 };
 
 const PROPERTY_TYPES = [
@@ -59,10 +82,16 @@ const QUICK_BUDGETS: Array<{ label: string; min?: number; max?: number }> = [
 ];
 
 export default function PropertiesPage() {
+  const searchParams = useSearchParams();
+  const searchParamString = searchParams.toString();
   const { user, isAllowed } = useRequireAuth();
+  const urlFilters = useMemo(
+    () => readFiltersFromSearchParams(new URLSearchParams(searchParamString)),
+    [searchParamString],
+  );
   const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState<PropertyListQuery>(initialFilters);
-  const [draftFilters, setDraftFilters] = useState<PropertyListQuery>(initialFilters);
+  const [filters, setFilters] = useState<PropertyListQuery>(urlFilters);
+  const [draftFilters, setDraftFilters] = useState<PropertyListQuery>(urlFilters);
   const [showFilters, setShowFilters] = useState(false);
   const [locationQuery, setLocationQuery] = useState("");
   const [locationSummary, setLocationSummary] = useState("");
@@ -78,6 +107,12 @@ export default function PropertiesPage() {
   const favoritesQuery  = useFavorites(user?.role === "TENANT");
   const { addMutation, removeMutation } = useFavoriteMutations();
   const { runOnce } = useIdempotentAction();
+
+  useEffect(() => {
+    setFilters(urlFilters);
+    setDraftFilters(urlFilters);
+    setPage(1);
+  }, [urlFilters]);
 
   const favoriteIds = useMemo(
     () => new Set((favoritesQuery.data ?? []).map((item) => item.property_id)),
@@ -128,6 +163,7 @@ export default function PropertiesPage() {
     filters.locality ||
     filters.state ||
     filters.property_type ||
+    filters.furnishing ||
     filters.min_rent ||
     filters.max_rent ||
     filters.q
@@ -610,6 +646,12 @@ export default function PropertiesPage() {
                       <button onClick={() => { setFilters(p => ({ ...p, property_type: "" })); setDraftFilters(p => ({ ...p, property_type: "" })); setPage(1); }}><X className="w-3 h-3" /></button>
                     </span>
                   )}
+                  {filters.furnishing && (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-full">
+                      {filters.furnishing}
+                      <button onClick={() => { setFilters(p => ({ ...p, furnishing: "" })); setDraftFilters(p => ({ ...p, furnishing: "" })); setPage(1); }}><X className="w-3 h-3" /></button>
+                    </span>
+                  )}
                   {(filters.min_rent || filters.max_rent) && (
                     <span className="inline-flex items-center gap-1 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-full">
                       ₹{filters.min_rent ?? 0}–{filters.max_rent ?? "∞"}
@@ -748,4 +790,3 @@ export default function PropertiesPage() {
     </div>
   );
 }
-

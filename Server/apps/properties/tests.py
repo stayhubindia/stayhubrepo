@@ -7,6 +7,7 @@ from django.core.exceptions import PermissionDenied
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase
 from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import AllowAny
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.properties.models import Property, PropertyImage
@@ -294,6 +295,26 @@ class PropertyAPITests(SimpleTestCase):
 
         self.assertEqual(response.status_code, 400)
         create_mock.assert_called_once()
+
+    def test_search_allows_public_property_lookup(self):
+        property_obj = self._build_property(self.owner)
+        property_obj.status = "ACTIVE"
+        queryset = Mock()
+        queryset.prefetch_related.return_value = queryset
+        queryset.filter.return_value = queryset
+
+        with patch("apps.properties.views.Property.objects") as property_manager, patch.object(
+            PropertyViewSet,
+            "filter_queryset",
+            return_value=[property_obj],
+        ), patch.object(PropertyViewSet, "paginate_queryset", return_value=None):
+            property_manager.select_related.return_value = queryset
+            request = self.factory.get("/api/v1/properties/search/?limit=1")
+            response = PropertyViewSet.as_view({"get": "search"}, permission_classes=[AllowAny])(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data[0]["id"], str(property_obj.id))
+        queryset.filter.assert_called_once_with(status="ACTIVE")
 
     def test_feature_invalid_days_returns_400(self):
         property_obj = self._build_property(self.owner)

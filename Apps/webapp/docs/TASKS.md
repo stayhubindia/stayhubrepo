@@ -41,8 +41,15 @@ This board tracks frontend work as production-grade milestones.
 - [x] Token refresh strategy and session expiry UX.
 - [x] Idempotent mutation guards on high-impact actions.
 - [x] Offline/retry queue for transient network failures.
+- [x] End-to-end test coverage for auth + property + leads critical path.
+  - [x] Playwright setup with Chrome + Firefox
+  - [x] Auth flow tests (OTP request/verify, persistence)
+  - [x] Critical path tests (browse → favorite → contact)
+  - [x] Property management tests (search, filter, detail, CRUD)
+  - [x] Favorites workflow tests
+  - [x] Contacts/leads workflow tests
+  - [x] E2E test documentation and helpers
 - [ ] API schema contract tests (OpenAPI / typed client generation).
-- [ ] End-to-end test coverage for auth + property + leads critical path.
 
 ## Phase 5: Performance & Observability
 - [ ] Code-splitting per module boundary.

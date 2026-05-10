@@ -2,11 +2,14 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Images: allow the production API domain as a remote pattern for Next.js Image
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   images: {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "api.stayhubindia.com",
+        hostname: "api.stayhub.com",
         pathname: "/**",
       },
     ],

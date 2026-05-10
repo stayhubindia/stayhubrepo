@@ -17,7 +17,7 @@ GharBazar_Project/
 
 | Layer    | Technology                                      |
 |----------|-------------------------------------------------|
-| Backend  | Django 5, Django REST Framework, Django Channels |
+| Backend  | Django 6, Django REST Framework, Django Channels |
 | Database | PostgreSQL (Supabase), Redis                    |
 | Auth     | Firebase Authentication, JWT                   |
 | Web App  | Next.js 15, TypeScript, Tailwind CSS, Zustand  |

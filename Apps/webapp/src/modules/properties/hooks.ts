@@ -50,13 +50,14 @@ export interface CreatePropertyInput {
   amenity_ids?: number[];
 }
 
-export function useMyProperties() {
+export function useMyProperties(enabled = true) {
   return useQuery<Property[]>({
     queryKey: ["properties", "mine"],
     queryFn: async () => {
       const response = await http.get("/properties/?mine=true");
       return response.data.results || response.data;
     },
+    enabled,
   });
 }
 

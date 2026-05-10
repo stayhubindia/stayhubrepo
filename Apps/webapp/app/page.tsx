@@ -5,6 +5,8 @@ import {
   Building2, Search, Shield, TrendingUp, Users, MapPin,
   ArrowRight, CheckCircle, MessageSquare, ChevronDown,
   LogOut, Menu, X, Bell, Plus, BarChart2, Heart, Eye, Home, Filter,
+  Headphones, Star, CheckCircle2, DollarSign, Calendar, UserRound,
+  BedDouble, Bath, Maximize2, Wifi, LockKeyhole, Sparkles,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -13,70 +15,63 @@ import type { AppUser } from "@/types/auth";
 import { useQuery } from "@tanstack/react-query";
 import { http } from "@/services/http";
 import type { PropertyListItem } from "@/types/property";
+import { HeroSearchBar } from "@/components/home/hero-search-bar";
 import "./animations.css";
 import { motion, AnimatePresence } from "framer-motion";
+import AuthModal from "@/components/AuthModal";
 
 // ─── Animation variants ──────────────────────────────────────────────────────
 
 const fadeUp = {
   hidden: { opacity: 0, y: 32 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.55, ease: "easeOut" as const } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: "easeOut" as const } },
 };
 
 const stagger = {
   hidden: {},
-  show:   { transition: { staggerChildren: 0.1 } },
+  show: { transition: { staggerChildren: 0.1 } },
 };
 
 const staggerFast = {
   hidden: {},
-  show:   { transition: { staggerChildren: 0.07 } },
+  show: { transition: { staggerChildren: 0.07 } },
 };
 
 // ─── Static data ────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
-  { emoji: "🏠", label: "PG / Hostel",  sub: "Shared living",   type: "PG",         color: "blue"    },
-  { emoji: "🛏️", label: "Room Rent",    sub: "Single rooms",    type: "1RK",        color: "violet"  },
-  { emoji: "🏢", label: "1 BHK",        sub: "Studio flats",    type: "1BHK",       color: "rose"    },
-  { emoji: "🏡", label: "2–3 BHK",      sub: "Family homes",    type: "2BHK",       color: "emerald" },
-  { emoji: "🏬", label: "Commercial",   sub: "Shops & offices", type: "COMMERCIAL", color: "amber"   },
-  { emoji: "🏰", label: "Villa",        sub: "Premium rentals", type: "HOUSE",      color: "teal"    },
-];
-
-const STATS = [
-  { value: "10,000+", label: "Properties" },
-  { value: "50+",     label: "Cities"     },
-  { value: "25K+",    label: "Tenants"    },
-  { value: "₹0",      label: "Brokerage"  },
+  { emoji: "🏠", label: "PG / Hostel", sub: "Shared living", type: "PG", color: "blue" },
+  { emoji: "🛏️", label: "Room Rent", sub: "Single rooms", type: "1RK", color: "violet" },
+  { emoji: "🏢", label: "1 BHK", sub: "Studio flats", type: "1BHK", color: "rose" },
+  { emoji: "🏡", label: "2–3 BHK", sub: "Family homes", type: "2BHK", color: "emerald" },
+  { emoji: "🏬", label: "Commercial", sub: "Shops & offices", type: "COMMERCIAL", color: "amber" },
+  { emoji: "🏰", label: "Villa", sub: "Premium rentals", type: "HOUSE", color: "teal" },
 ];
 
 const HOW_IT_WORKS = [
-  { num: "01", icon: Search,        title: "Search homes", desc: "Choose a city, budget, and property type. Start with simple filters and narrow down only if needed." },
+  { num: "01", icon: Search, title: "Search homes", desc: "Choose a city, budget, and property type. Start with simple filters and narrow down only if needed." },
   { num: "02", icon: MessageSquare, title: "Talk to the owner", desc: "Ask questions, confirm rent, and plan a visit directly with the person listing the property." },
-  { num: "03", icon: CheckCircle,   title: "Visit and decide", desc: "Shortlist what you like, visit the place, and move ahead when it feels right." },
+  { num: "03", icon: CheckCircle, title: "Visit and decide", desc: "Shortlist what you like, visit the place, and move ahead when it feels right." },
 ];
 
-const POPULAR_CITIES = ["Mumbai", "Bangalore", "Delhi", "Pune", "Hyderabad", "Chennai", "Ahmedabad", "Jaipur"];
-
 const CAT_COLORS: Record<string, { border: string; bg: string; icon: string; text: string; glow: string }> = {
-  blue:    { border: "hover:border-blue-400",    bg: "hover:bg-blue-50",    icon: "bg-blue-100 text-blue-600",     text: "group-hover:text-blue-700",    glow: "group-hover:shadow-blue-100"    },
-  violet:  { border: "hover:border-violet-400",  bg: "hover:bg-violet-50",  icon: "bg-violet-100 text-violet-600", text: "group-hover:text-violet-700",  glow: "group-hover:shadow-violet-100"  },
-  rose:    { border: "hover:border-rose-400",    bg: "hover:bg-rose-50",    icon: "bg-rose-100 text-rose-600",     text: "group-hover:text-rose-700",    glow: "group-hover:shadow-rose-100"    },
-  emerald: { border: "hover:border-emerald-400", bg: "hover:bg-emerald-50", icon: "bg-emerald-100 text-emerald-600",text:"group-hover:text-emerald-700", glow: "group-hover:shadow-emerald-100" },
-  amber:   { border: "hover:border-amber-400",   bg: "hover:bg-amber-50",   icon: "bg-amber-100 text-amber-600",   text: "group-hover:text-amber-700",  glow: "group-hover:shadow-amber-100"   },
-  teal:    { border: "hover:border-teal-400",    bg: "hover:bg-teal-50",    icon: "bg-teal-100 text-teal-600",     text: "group-hover:text-teal-700",   glow: "group-hover:shadow-teal-100"    },
+  blue: { border: "hover:border-blue-400", bg: "hover:bg-blue-50", icon: "bg-blue-100 text-blue-600", text: "group-hover:text-blue-700", glow: "group-hover:shadow-blue-100" },
+  violet: { border: "hover:border-violet-400", bg: "hover:bg-violet-50", icon: "bg-violet-100 text-violet-600", text: "group-hover:text-violet-700", glow: "group-hover:shadow-violet-100" },
+  rose: { border: "hover:border-rose-400", bg: "hover:bg-rose-50", icon: "bg-rose-100 text-rose-600", text: "group-hover:text-rose-700", glow: "group-hover:shadow-rose-100" },
+  emerald: { border: "hover:border-emerald-400", bg: "hover:bg-emerald-50", icon: "bg-emerald-100 text-emerald-600", text: "group-hover:text-emerald-700", glow: "group-hover:shadow-emerald-100" },
+  amber: { border: "hover:border-amber-400", bg: "hover:bg-amber-50", icon: "bg-amber-100 text-amber-600", text: "group-hover:text-amber-700", glow: "group-hover:shadow-amber-100" },
+  teal: { border: "hover:border-teal-400", bg: "hover:bg-teal-50", icon: "bg-teal-100 text-teal-600", text: "group-hover:text-teal-700", glow: "group-hover:shadow-teal-100" },
 };
 
 // ─── Logged-in dashboard home ────────────────────────────────────────────────
 
 const TYPE_GRADIENTS: Record<string, string> = {
-  PG:         "from-blue-500 to-indigo-600",
-  "1RK":      "from-violet-500 to-purple-600",
-  "1BHK":     "from-rose-500 to-pink-600",
-  "2BHK":     "from-emerald-500 to-teal-600",
-  "3BHK":     "from-amber-500 to-orange-600",
-  HOUSE:      "from-teal-500 to-cyan-600",
+  PG: "from-blue-500 to-indigo-600",
+  "1RK": "from-violet-500 to-purple-600",
+  "1BHK": "from-rose-500 to-pink-600",
+  "2BHK": "from-emerald-500 to-teal-600",
+  "3BHK": "from-amber-500 to-orange-600",
+  HOUSE: "from-teal-500 to-cyan-600",
   COMMERCIAL: "from-slate-500 to-slate-700",
 };
 
@@ -85,19 +80,68 @@ const TYPE_ICONS: Record<string, string> = {
 };
 
 const FURNISH_BADGE: Record<string, { label: string; cls: string }> = {
-  FURNISHED:   { label: "Furnished",      cls: "bg-emerald-100 text-emerald-700" },
-  SEMI:        { label: "Semi-furnished", cls: "bg-amber-100 text-amber-700"    },
-  UNFURNISHED: { label: "Bare",           cls: "bg-slate-100 text-slate-600"    },
+  FURNISHED: { label: "Furnished", cls: "bg-emerald-100 text-emerald-700" },
+  SEMI: { label: "Semi-furnished", cls: "bg-amber-100 text-amber-700" },
+  UNFURNISHED: { label: "Bare", cls: "bg-slate-100 text-slate-600" },
 };
+
+const PROPERTY_IMAGES = [
+  "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85",
+  "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=85",
+  "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85",
+  "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=85",
+  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=85",
+  "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=85",
+];
+
+const POPULAR_SEARCHES = [
+  { label: "Mumbai", params: { city: "Mumbai" } },
+  { label: "Bangalore", params: { city: "Bengaluru" } },
+  { label: "Delhi NCR", params: { city: "Delhi NCR" } },
+  { label: "PG / Hostel", params: { property_type: "PG" } },
+  { label: "Under ₹20K", params: { max_rent: "20000" } },
+];
+
+const POPULAR_LOCATIONS = [
+  {
+    city: "Mumbai",
+    copy: "Skyline apartments and compact city homes",
+    image: "https://images.unsplash.com/photo-1567157577867-05ccb1388e66?auto=format&fit=crop&w=900&q=85",
+  },
+  {
+    city: "Bengaluru",
+    copy: "Work-friendly stays close to tech corridors",
+    image: "https://images.unsplash.com/photo-1596176530529-78163a4f7af2?auto=format&fit=crop&w=900&q=85",
+  },
+  {
+    city: "Delhi NCR",
+    copy: "Connected homes around metro-led neighborhoods",
+    image: "https://images.unsplash.com/photo-1587474260584-136574528ed5?auto=format&fit=crop&w=900&q=85",
+  },
+  {
+    city: "Pune",
+    copy: "Calm apartments near offices and campuses",
+    image: "https://images.unsplash.com/photo-1600607688969-a5bfcd646154?auto=format&fit=crop&w=900&q=85",
+  },
+];
+
+const TRUST_ITEMS = [
+  { icon: Shield, title: "Clear listings", desc: "Useful details before you visit" },
+  { icon: DollarSign, title: "Rent clarity", desc: "Budget-first discovery" },
+  { icon: Headphones, title: "Guided support", desc: "Help when you need it" },
+  { icon: LockKeyhole, title: "Private by design", desc: "Your shortlist stays yours" },
+];
+
+const PENDING_SEARCH_STORAGE_KEY = "stayhub:pending-search-path";
 
 function PropertyCard({ p }: { p: PropertyListItem }) {
   const grad = TYPE_GRADIENTS[p.property_type] ?? "from-slate-400 to-slate-500";
   const icon = TYPE_ICONS[p.property_type] ?? "🏠";
-  const fb   = FURNISH_BADGE[p.furnishing];
+  const fb = FURNISH_BADGE[p.furnishing];
 
   return (
     <Link href={`/properties/${p.id}`} className="group block">
-      <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 hover:border-emerald-300 hover:shadow-xl shadow-sm transition-all duration-300">
+      <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 hover:border-emerald-300 hover:shadow-xl shadow-sm transition-all duration-300 hover:-translate-y-1">
         {/* Image / placeholder */}
         <div className={`h-44 bg-gradient-to-br ${grad} relative flex flex-col justify-between p-4`}>
           {/* Top badges */}
@@ -130,15 +174,32 @@ function PropertyCard({ p }: { p: PropertyListItem }) {
             <MapPin className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">{p.locality}, {p.city}</span>
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mb-3">
             {fb && <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${fb.cls}`}>{fb.label}</span>}
             {p.is_featured && <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">⭐ Featured</span>}
           </div>
           {/* Stats row */}
-          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-xs text-slate-400">
-            <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" />{p.total_views} views</span>
+          <div className="flex items-center gap-4 mb-3 pt-3 border-t border-slate-100 text-xs text-slate-400">
+            <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" />{p.total_views}</span>
             <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" />{p.total_favorites}</span>
             <span className="flex items-center gap-1"><MessageSquare className="w-3.5 h-3.5" />{p.total_contacts}</span>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2 pt-3 border-t border-slate-100">
+            <button
+              onClick={(e) => e.preventDefault()}
+              className="flex-1 px-3 py-2 rounded-lg border border-slate-200 text-slate-700 font-medium text-sm hover:bg-slate-50 transition-colors"
+            >
+              Details
+            </button>
+            <button
+              onClick={(e) => e.preventDefault()}
+              className="flex-1 px-3 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-medium text-sm hover:from-emerald-600 hover:to-teal-700 transition-all flex items-center justify-center gap-1"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              Chat
+            </button>
           </div>
         </div>
       </div>
@@ -146,8 +207,101 @@ function PropertyCard({ p }: { p: PropertyListItem }) {
   );
 }
 
+function PublicPropertyCard({ p, index = 0, onAuthRequired }: { p: PropertyListItem; index?: number; onAuthRequired?: () => void }) {
+  const location = [p.locality, p.city].filter(Boolean).join(", ") || "Location available after sign in";
+  const image = PROPERTY_IMAGES[index % PROPERTY_IMAGES.length];
+  const rent = Number(p.rent);
+  const beds = p.property_type === "PG" || p.property_type === "1RK" ? 1 : p.property_type === "3BHK" ? 3 : p.property_type === "2BHK" ? 2 : 1;
+
+  return (
+    <motion.article
+      onClick={() => onAuthRequired?.()}
+      whileHover={{ y: -8 }}
+      transition={{ type: "spring", stiffness: 260, damping: 22 }}
+      className="group overflow-hidden rounded-3xl border border-white/5 bg-[#111614]/80 shadow-2xl backdrop-blur-xl relative cursor-pointer"
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      <div className="relative h-56 overflow-hidden sm:h-64 lg:h-60 xl:h-64 rounded-t-3xl">
+        <img
+          src={image}
+          alt={p.title}
+          className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#111614] via-black/10 to-transparent opacity-90" />
+
+        {/* Badges */}
+        <div className="absolute top-4 left-4 flex gap-2">
+          {index % 2 === 0 && (
+            <span className="px-2.5 py-1 rounded-full bg-emerald-500/90 text-white text-[10px] font-bold uppercase tracking-wide backdrop-blur-md">
+              Verified
+            </span>
+          )}
+          {index % 3 === 0 && (
+            <span className="px-2.5 py-1 rounded-full bg-violet-500/90 text-white text-[10px] font-bold uppercase tracking-wide backdrop-blur-md">
+              Premium
+            </span>
+          )}
+        </div>
+
+        <button
+          type="button"
+          aria-label="Save property"
+          onClick={(e) => { e.stopPropagation(); onAuthRequired?.(); }}
+          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white backdrop-blur-md transition hover:bg-emerald-500/20 hover:text-emerald-300"
+        >
+          <Heart className="h-4 w-4" />
+        </button>
+        <div className="absolute bottom-4 left-4 flex items-center gap-2">
+          <div className="flex -space-x-2">
+            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}1`} alt="viewer" className="w-6 h-6 rounded-full border border-[#111614] bg-emerald-100" />
+            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}2`} alt="viewer" className="w-6 h-6 rounded-full border border-[#111614] bg-emerald-200" />
+            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}3`} alt="viewer" className="w-6 h-6 rounded-full border border-[#111614] bg-emerald-300" />
+          </div>
+          <span className="text-[11px] font-medium text-white/80 drop-shadow-md">{Math.max(24, p.total_views)}+ viewed today</span>
+        </div>
+      </div>
+
+      <div className="p-5 relative z-10">
+        <div className="mb-3">
+          <h3 className="line-clamp-1 text-lg font-bold text-white group-hover:text-emerald-300 transition-colors">{p.title}</h3>
+          <p className="mt-1.5 flex items-center gap-1.5 text-xs text-white/60">
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-400/70" />
+            <span className="truncate">{location}</span>
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 mb-5 text-[11px] font-medium text-white/50">
+          <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-full"><BedDouble className="h-3 w-3 text-emerald-400" />{beds} Beds</span>
+          <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-full"><Bath className="h-3 w-3 text-emerald-400" />{beds > 1 ? 2 : 1} Baths</span>
+          <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-full"><Maximize2 className="h-3 w-3 text-emerald-400" />{beds * 420 + 280} sqft</span>
+          <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-full"><Wifi className="h-3 w-3 text-emerald-400" />Free WiFi</span>
+        </div>
+
+        <div className="flex items-end justify-between pt-4 border-t border-white/5">
+          <div>
+            <p className="text-[10px] text-white/40 uppercase tracking-wider mb-0.5 font-medium">Monthly Rent</p>
+            <p className="text-xl font-black text-emerald-400 flex items-baseline gap-1">
+              ₹{Number.isFinite(rent) ? rent.toLocaleString("en-IN", { maximumFractionDigits: 0 }) : p.rent}
+              <span className="text-[11px] font-medium text-white/40">/ mo</span>
+            </p>
+            <p className="text-[10px] text-white/30 mt-0.5">Inclusive of maintenance</p>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onAuthRequired?.(); }}
+            className="group/btn flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-xs font-semibold text-emerald-300 transition-all hover:bg-emerald-500 hover:border-emerald-500 hover:text-white"
+          >
+            View Details
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/btn:translate-x-0.5" />
+          </button>
+        </div>
+      </div>
+    </motion.article>
+  );
+}
+
 function LoggedInHome({ user, onSignOut }: { user: AppUser; onSignOut: () => void }) {
-  const [showMenu, setShowMenu]   = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [activeType, setActiveType] = useState("ALL");
   const [currentLocationLabel, setCurrentLocationLabel] = useState<string>("");
 
@@ -161,11 +315,9 @@ function LoggedInHome({ user, onSignOut }: { user: AppUser; onSignOut: () => voi
     staleTime: 60_000,
   });
 
-  const isOwner   = user.role === "OWNER";
-  const initials  = ((user.first_name?.[0] ?? "") + (user.last_name?.[0] ?? "")).toUpperCase() || user.email?.[0]?.toUpperCase() || "U";
+  const isOwner = user.role === "OWNER";
+  const initials = ((user.first_name?.[0] ?? "") + (user.last_name?.[0] ?? "")).toUpperCase() || user.email?.[0]?.toUpperCase() || "U";
   const firstName = user.first_name ?? user.email?.split("@")[0] ?? "there";
-  const hour      = new Date().getHours();
-  const greeting  = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   useEffect(() => {
     const fallback = [user.location?.locality, user.location?.city, user.location?.state]
@@ -241,25 +393,25 @@ function LoggedInHome({ user, onSignOut }: { user: AppUser; onSignOut: () => voi
   const filtered = activeType === "ALL" ? (properties ?? []) : (properties ?? []).filter(p => p.property_type === activeType);
 
   const OWNER_ACTIONS = [
-    { icon: Plus,         label: "Add Listing",   sub: "Post a property",     href: "/my-ads",    color: "emerald" },
-    { icon: BarChart2,    label: "Analytics",     sub: "Views & leads",       href: "/analytics", color: "blue"    },
-    { icon: MessageSquare,label: "Messages",      sub: "Tenant inquiries",    href: "/messages",  color: "violet"  },
-    { icon: TrendingUp,   label: "My Listings",   sub: "Manage your ads",     href: "/my-ads",    color: "amber"   },
+    { icon: Plus, label: "Add Listing", sub: "Post a property", href: "/my-ads", color: "emerald" },
+    { icon: BarChart2, label: "Analytics", sub: "Views & leads", href: "/analytics", color: "blue" },
+    { icon: MessageSquare, label: "Messages", sub: "Tenant inquiries", href: "/messages", color: "violet" },
+    { icon: TrendingUp, label: "My Listings", sub: "Manage your ads", href: "/my-ads", color: "amber" },
   ];
   const TENANT_ACTIONS = [
-    { icon: Search,       label: "Find a Home",   sub: "Browse properties",   href: "/properties",color: "emerald" },
-    { icon: Heart,        label: "Saved",          sub: "Your shortlist",      href: "/favorites", color: "rose"    },
-    { icon: MessageSquare,label: "Messages",      sub: "Talk to owners",       href: "/messages",  color: "violet"  },
-    { icon: MapPin,       label: "Cities",         sub: "Explore locations",   href: "/properties",color: "amber"   },
+    { icon: Search, label: "Find a Home", sub: "Browse properties", href: "/properties", color: "emerald" },
+    { icon: Heart, label: "Saved", sub: "Your shortlist", href: "/favorites", color: "rose" },
+    { icon: MessageSquare, label: "Messages", sub: "Talk to owners", href: "/messages", color: "violet" },
+    { icon: MapPin, label: "Cities", sub: "Explore locations", href: "/properties", color: "amber" },
   ];
   const actions = isOwner ? OWNER_ACTIONS : TENANT_ACTIONS;
 
   const ACTION_COLORS: Record<string, { icon: string; ring: string; text: string }> = {
     emerald: { icon: "bg-emerald-100 text-emerald-600", ring: "ring-emerald-200", text: "text-emerald-600" },
-    blue:    { icon: "bg-blue-100 text-blue-600",       ring: "ring-blue-200",    text: "text-blue-600"    },
-    violet:  { icon: "bg-violet-100 text-violet-600",   ring: "ring-violet-200",  text: "text-violet-600"  },
-    amber:   { icon: "bg-amber-100 text-amber-600",     ring: "ring-amber-200",   text: "text-amber-600"   },
-    rose:    { icon: "bg-rose-100 text-rose-600",       ring: "ring-rose-200",    text: "text-rose-600"    },
+    blue: { icon: "bg-blue-100 text-blue-600", ring: "ring-blue-200", text: "text-blue-600" },
+    violet: { icon: "bg-violet-100 text-violet-600", ring: "ring-violet-200", text: "text-violet-600" },
+    amber: { icon: "bg-amber-100 text-amber-600", ring: "ring-amber-200", text: "text-amber-600" },
+    rose: { icon: "bg-rose-100 text-rose-600", ring: "ring-rose-200", text: "text-rose-600" },
   };
 
   return (
@@ -331,9 +483,9 @@ function LoggedInHome({ user, onSignOut }: { user: AppUser; onSignOut: () => voi
                         <p className="text-xs text-slate-400 mt-0.5 capitalize">{isOwner ? "Property Owner" : "Tenant"}</p>
                       </div>
                       <div className="py-1">
-                        <Link href="/profile"   onClick={() => setShowMenu(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-slate-700 hover:bg-slate-50 transition-colors"><Home className="w-3.5 h-3.5 text-slate-400" />Profile</Link>
+                        <Link href="/profile" onClick={() => setShowMenu(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-slate-700 hover:bg-slate-50 transition-colors"><Home className="w-3.5 h-3.5 text-slate-400" />Profile</Link>
                         <Link href="/dashboard" onClick={() => setShowMenu(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-slate-700 hover:bg-slate-50 transition-colors"><BarChart2 className="w-3.5 h-3.5 text-slate-400" />Dashboard</Link>
-                        <Link href="/messages"  onClick={() => setShowMenu(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-slate-700 hover:bg-slate-50 transition-colors"><MessageSquare className="w-3.5 h-3.5 text-slate-400" />Messages</Link>
+                        <Link href="/messages" onClick={() => setShowMenu(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-slate-700 hover:bg-slate-50 transition-colors"><MessageSquare className="w-3.5 h-3.5 text-slate-400" />Messages</Link>
                       </div>
                       <div className="border-t border-slate-100 pt-1">
                         <button onClick={onSignOut} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-red-600 hover:bg-red-50 transition-colors">
@@ -353,37 +505,38 @@ function LoggedInHome({ user, onSignOut }: { user: AppUser; onSignOut: () => voi
 
         {/* ── Welcome banner ─────────────────────────────────────────── */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 p-8 sm:p-10"
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 p-8 sm:p-12"
         >
           {/* Background decoration */}
           <div className="absolute -right-20 -top-20 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -left-10 -bottom-10 w-48 h-48 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "20px 20px" }} />
 
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-            <div>
-              <p className="text-sm text-emerald-400 font-medium mb-1">{greeting},</p>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 capitalize">{firstName} 👋</h1>
-              <p className="text-slate-400 text-sm max-w-sm">
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-8">
+            <div className="flex-1">
+              <p className="text-sm text-emerald-300 font-semibold mb-2 uppercase tracking-wide">Welcome back,</p>
+              <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 capitalize leading-tight">{firstName} 👋</h1>
+              <p className="text-slate-300 text-base max-w-md leading-relaxed">
                 {isOwner
-                  ? "Manage your listings, track leads, and grow your rental business."
-                  : "Discover verified rentals across India — zero brokerage, direct from owners."}
+                  ? "Manage your listings, track leads, and grow your rental business with real-time insights."
+                  : "Discover verified rentals across India — zero brokerage, direct from owners. Your next home awaits."}
               </p>
-              <p className="mt-3 inline-flex max-w-lg items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200">
-                <MapPin className="h-3.5 w-3.5 text-emerald-300" />
-                <span className="truncate">Current location: {currentLocationLabel || "Detecting precise location..."}</span>
+              <p className="mt-4 inline-flex max-w-lg items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-slate-200 backdrop-blur-sm">
+                <MapPin className="h-4 w-4 text-emerald-300 shrink-0" />
+                <span className="truncate">📍 {currentLocationLabel || "Detecting location..."}</span>
               </p>
             </div>
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex flex-col gap-3 shrink-0">
               <Link href={isOwner ? "/my-ads" : "/properties"}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-emerald-500/30"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-sm font-semibold rounded-xl transition-all shadow-lg shadow-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/40"
               >
-                {isOwner ? <Plus className="w-4 h-4" /> : <Search className="w-4 h-4" />}
-                {isOwner ? "Add Property" : "Find a Home"}
+                {isOwner ? <Plus className="w-5 h-5" /> : <Search className="w-5 h-5" />}
+                {isOwner ? "Add Property" : "Browse Properties"}
               </Link>
               <Link href="/dashboard"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/15 text-white text-sm font-semibold rounded-xl transition-colors border border-white/10"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/15 text-white text-sm font-semibold rounded-xl transition-all border border-white/20 backdrop-blur-sm"
               >
+                <BarChart2 className="w-4 h-4" />
                 Dashboard
               </Link>
             </div>
@@ -414,32 +567,20 @@ function LoggedInHome({ user, onSignOut }: { user: AppUser; onSignOut: () => voi
           })}
         </motion.div>
 
-        {/* ── Search bar ─────────────────────────────────────────────── */}
-        <div className="relative">
-          <Link href="/properties">
-            <motion.div whileHover={{ scale: 1.005 }} whileTap={{ scale: 0.995 }}
-              className="flex items-center gap-3 bg-white border-2 border-slate-200 hover:border-emerald-400 transition-colors rounded-2xl px-5 py-4 shadow-sm cursor-pointer group"
-            >
-              <Search className="w-5 h-5 text-slate-400 group-hover:text-emerald-500 transition-colors shrink-0" />
-              <span className="text-slate-400 group-hover:text-slate-600 transition-colors text-sm">Search PG, room, flat, commercial space…</span>
-              <span className="ml-auto flex items-center gap-1 text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">
-                <Filter className="w-3 h-3" /> Filters
-              </span>
-            </motion.div>
-          </Link>
-        </div>
+        {/* ── Enhanced Search Bar ────────────────────────────────────── */}
+        <HeroSearchBar />
 
         {/* ── Properties section ─────────────────────────────────────── */}
         <section>
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Featured Properties</h2>
-              <p className="text-sm text-slate-500 mt-0.5">Verified listings across India</p>
+              <h2 className="text-xl font-bold text-slate-900">Featured Properties</h2>
+              <p className="text-sm text-slate-500 mt-1">Verified listings across India — Zero brokerage</p>
             </div>
             <Link href="/properties"
-              className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 flex items-center gap-1 group"
+              className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 flex items-center gap-2 group"
             >
-              View All <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              View All <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
 
@@ -458,11 +599,10 @@ function LoggedInHome({ user, onSignOut }: { user: AppUser; onSignOut: () => voi
             {TYPE_FILTERS.map((t) => (
               <motion.button key={t} whileTap={{ scale: 0.95 }}
                 onClick={() => setActiveType(t)}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
-                  activeType === t
-                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
-                    : "bg-white text-slate-600 border border-slate-200 hover:border-emerald-300 hover:text-emerald-700"
-                }`}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${activeType === t
+                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                  : "bg-white text-slate-600 border border-slate-200 hover:border-emerald-300 hover:text-emerald-700"
+                  }`}
               >
                 {t === "ALL" ? "All Types" : t}
               </motion.button>
@@ -522,22 +662,25 @@ function LoggedInHome({ user, onSignOut }: { user: AppUser; onSignOut: () => voi
 
         {/* ── Categories quick-browse ────────────────────────────────── */}
         <section className="pb-4">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-bold text-slate-900">Browse by Type</h2>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Browse by Category</h2>
+              <p className="text-sm text-slate-500 mt-1">Find exactly what you&apos;re looking for</p>
+            </div>
           </div>
           <motion.div variants={staggerFast} initial="hidden" animate="show"
-            className="grid grid-cols-3 sm:grid-cols-6 gap-3"
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4"
           >
             {CATEGORIES.map((cat) => {
               const c = CAT_COLORS[cat.color];
               return (
                 <motion.div key={cat.type} variants={fadeUp}>
-                  <Link href={`/properties?type=${cat.type}`}
-                    className={`group flex flex-col items-center gap-2 p-4 bg-white rounded-2xl border border-slate-200 ${c.border} ${c.bg} ${c.glow} hover:shadow-lg transition-all duration-200 block`}
+                  <Link href={`/properties?property_type=${cat.type}`}
+                    className={`group flex flex-col items-center gap-3 p-5 bg-white rounded-2xl border border-slate-200 ${c.border} ${c.bg} ${c.glow} hover:shadow-lg hover:-translate-y-1 transition-all duration-200 block`}
                   >
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${c.icon}`}>{cat.emoji}</div>
-                    <span className={`text-xs font-semibold text-slate-700 text-center leading-tight ${c.text} transition-colors`}>{cat.label}</span>
-                    <span className="text-xs text-slate-400 hidden sm:block">{cat.sub}</span>
+                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-3xl ${c.icon} group-hover:scale-110 transition-transform`}>{cat.emoji}</div>
+                    <span className={`text-sm font-semibold text-slate-900 text-center leading-tight ${c.text} transition-colors`}>{cat.label}</span>
+                    <span className="text-xs text-slate-400 hidden sm:block text-center">{cat.sub}</span>
                   </Link>
                 </motion.div>
               );
@@ -559,7 +702,7 @@ function LoggedInHome({ user, onSignOut }: { user: AppUser; onSignOut: () => voi
           <p className="text-xs text-slate-400">© {new Date().getFullYear()} StayHub Technologies. India&apos;s zero-brokerage rental platform.</p>
           <div className="flex items-center gap-4 text-xs text-slate-400">
             <Link href="/privacy" className="hover:text-emerald-600 transition-colors">Privacy</Link>
-            <Link href="/terms"   className="hover:text-emerald-600 transition-colors">Terms</Link>
+            <Link href="/terms" className="hover:text-emerald-600 transition-colors">Terms</Link>
             <Link href="/contact" className="hover:text-emerald-600 transition-colors">Contact</Link>
           </div>
         </div>
@@ -571,110 +714,100 @@ function LoggedInHome({ user, onSignOut }: { user: AppUser; onSignOut: () => voi
 
 // ─── Scroll-aware Navbar ─────────────────────────────────────────────────────
 
-function Navbar({ showSignInMenu, setShowSignInMenu }: { showSignInMenu: boolean; setShowSignInMenu: (v: boolean) => void }) {
+function Navbar({ onOpenAuth }: { onOpenAuth: (role: "TENANT" | "OWNER") => void }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
-    <>
-      <header className="sticky top-0 inset-x-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between gap-4">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 shrink-0">
-            <motion.div whileHover={{ rotate: -8, scale: 1.12 }} transition={{ type: "spring", stiffness: 400 }}
-              className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center shadow-emerald-500/40 shadow-lg"
-            >
-              <Building2 className="w-5 h-5 text-white" />
-            </motion.div>
-            <span className="text-xl font-bold tracking-tight text-slate-900">StayHub</span>
-          </Link>
-
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1">
-            {[["Browse Homes", "/properties"], ["How it Works", "#how-it-works"], ["For Owners", "#for-owners"]].map(([label, href]) => (
-              <motion.a key={label} href={href}
-                whileHover={{ y: -1 }}
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-emerald-600 rounded-lg transition-colors relative group"
-              >
-                {label}
-                <span className="absolute bottom-1 left-4 right-4 h-0.5 bg-emerald-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left rounded-full" />
-              </motion.a>
-            ))}
-          </nav>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2 shrink-0">
-            <motion.a href="/auth"
-              whileHover={{ scale: 1.03 }}
-              className="hidden sm:block px-4 py-2 text-sm font-semibold text-slate-600 hover:text-emerald-600 rounded-lg transition-colors"
-            >
-              Sign In
-            </motion.a>
-            <div className="relative">
-              <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.04 }}
-                onClick={() => setShowSignInMenu(!showSignInMenu)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-lg shadow-emerald-600/25"
-              >
-                Get Started
-                <motion.span animate={{ rotate: showSignInMenu ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                  <ChevronDown className="w-4 h-4" />
-                </motion.span>
-              </motion.button>
-              <AnimatePresence>
-                {showSignInMenu && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowSignInMenu(false)} />
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: -8 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                      transition={{ duration: 0.15, ease: "easeOut" }}
-                      className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-50 origin-top-right overflow-hidden"
-                    >
-                      <Link href="/auth?role=TENANT" onClick={() => setShowSignInMenu(false)} className="block px-4 py-3.5 hover:bg-emerald-50 transition-colors">
-                        <p className="text-sm font-semibold text-slate-900">I&apos;m a Tenant</p>
-                        <p className="text-xs text-slate-500 mt-0.5">Find my next home</p>
-                      </Link>
-                      <div className="mx-4 border-t border-slate-100" />
-                      <Link href="/auth?role=OWNER" onClick={() => setShowSignInMenu(false)} className="block px-4 py-3.5 hover:bg-emerald-50 transition-colors">
-                        <p className="text-sm font-semibold text-slate-900">I&apos;m an Owner</p>
-                        <p className="text-xs text-slate-500 mt-0.5">List my property</p>
-                      </Link>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-            {/* Mobile hamburger */}
-            <motion.button whileTap={{ scale: 0.9 }} onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden p-2 text-slate-700 hover:text-emerald-600 transition-colors"
-            >
-              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </motion.button>
+    <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-[#090e0c]/80 backdrop-blur-xl border-b border-white/5 py-3" : "bg-transparent py-5"}`}>
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-5 sm:px-8">
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-400/20 bg-emerald-500/10 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.15)] group-hover:bg-emerald-500/20 transition-all">
+            <Home className="h-5 w-5" />
           </div>
-        </div>
+          <span className="text-xl font-bold tracking-tight text-white">
+            Stay<span className="text-emerald-400">Hub</span>
+          </span>
+        </Link>
 
-        {/* Mobile menu */}
-        <AnimatePresence>
-          {mobileOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="md:hidden overflow-hidden bg-white border-t border-slate-200"
-            >
-              <div className="px-5 py-4 flex flex-col gap-1">
-                {[["Browse Homes", "/properties"], ["How it Works", "#how-it-works"], ["For Owners", "#for-owners"], ["Sign In", "/auth"]].map(([label, href]) => (
-                  <a key={label} href={href} onClick={() => setMobileOpen(false)}
-                    className="text-sm font-medium text-slate-700 hover:text-emerald-600 py-2.5 border-b border-slate-100 transition-colors"
-                  >{label}</a>
-                ))}
+        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-white/60">
+          {[
+            ["Home", "#top"],
+            ["Browse", "#featured"],
+            ["Categories", "#categories"],
+            ["How it works", "#how-it-works"],
+            ["About us", "#about"],
+          ].map(([label, href]) => (
+            <a key={label} href={href} className="transition-colors hover:text-white relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-0.5 after:bg-emerald-400 hover:after:w-full after:transition-all after:duration-300">
+              {label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-4">
+          <Link
+            href="/favorites"
+            className="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/10 lg:inline-flex"
+          >
+            <Heart className="h-4 w-4" />
+            Wishlist
+          </Link>
+          <button
+            onClick={() => onOpenAuth("TENANT")}
+            className="hidden items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] transition hover:bg-emerald-400 hover:shadow-[0_0_25px_rgba(16,185,129,0.4)] sm:inline-flex"
+          >
+            <UserRound className="h-4 w-4" />
+            Sign up
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white md:hidden"
+            aria-label="Open menu"
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
+      </div>
+
+
+
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden border-t border-white/5 bg-[#090e0c]/95 backdrop-blur-xl md:hidden"
+          >
+            <div className="space-y-1 px-5 py-4">
+              {[
+                ["Home", "#top"],
+                ["Browse", "#featured"],
+                ["Categories", "#categories"],
+                ["How it works", "#how-it-works"],
+                ["About us", "#about"],
+              ].map(([label, href]) => (
+                <a key={label} href={href} onClick={() => setMobileOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-medium text-white/70 hover:bg-white/5 hover:text-white">
+                  {label}
+                </a>
+              ))}
+              <div className="pt-4 pb-2">
+                <button onClick={() => { setMobileOpen(false); onOpenAuth("TENANT"); }} className="flex w-full items-center justify-center rounded-xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                  Sign in / Sign up
+                </button>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </header>
-    </>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </header>
   );
 }
 
@@ -682,47 +815,55 @@ function Navbar({ showSignInMenu, setShowSignInMenu }: { showSignInMenu: boolean
 
 function Footer() {
   return (
-    <footer className="border-t border-slate-200 bg-white">
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 py-10">
-        <div className="grid gap-8 md:grid-cols-[1.4fr_1fr_1fr]">
-          <div>
-            <Link href="/" className="flex items-center gap-2.5 mb-4">
-              <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/20">
-                <Building2 className="w-5 h-5 text-white" />
+    <footer className="border-t border-white/5 bg-[#090e0c]">
+      <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8">
+        <div className="grid gap-10 md:grid-cols-4">
+          <div className="md:col-span-2">
+            <Link href="/" className="flex items-center gap-3 mb-6">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+                <Home className="h-5 w-5" />
               </div>
-              <span className="text-lg font-bold text-slate-900">StayHub</span>
+              <span className="text-xl font-bold text-white">Stay<span className="text-emerald-400">Hub</span></span>
             </Link>
-            <p className="max-w-md text-sm leading-6 text-slate-600">
-              A simple rental platform for people who want to find a home or list a property without dealing with a broker.
+            <p className="max-w-md text-sm leading-relaxed text-white/50 mb-6">
+              Discover handpicked properties for rent that match your lifestyle. A cinematic property discovery platform for renters who want clarity, calm, and better spaces.
             </p>
+            <div className="flex gap-4">
+              <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors text-white/60"><Building2 size={18} /></div>
+              <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors text-white/60"><Users size={18} /></div>
+              <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors text-white/60"><MessageSquare size={18} /></div>
+            </div>
           </div>
 
           <div>
-            <h4 className="mb-4 text-sm font-semibold text-slate-900">Use StayHub</h4>
-            <ul className="space-y-2.5 text-sm text-slate-600">
+            <h4 className="mb-6 text-sm font-bold text-white uppercase tracking-wider">Explore</h4>
+            <ul className="space-y-4 text-sm text-white/50">
               {[["Browse homes", "/properties"], ["List a property", "/auth?role=OWNER"], ["Sign in", "/auth"], ["Saved homes", "/favorites"]].map(([label, href]) => (
                 <li key={label}>
-                  <Link href={href} className="hover:text-emerald-600 transition-colors">{label}</Link>
+                  <Link href={href} className="transition-colors hover:text-emerald-400">{label}</Link>
                 </li>
               ))}
             </ul>
           </div>
 
           <div>
-            <h4 className="mb-4 text-sm font-semibold text-slate-900">Support</h4>
-            <ul className="space-y-2.5 text-sm text-slate-600">
-              {[["Contact", "/contact"], ["Privacy", "/privacy"], ["Terms", "/terms"]].map(([label, href]) => (
+            <h4 className="mb-6 text-sm font-bold text-white uppercase tracking-wider">Support</h4>
+            <ul className="space-y-4 text-sm text-white/50">
+              {[["Contact Us", "/contact"], ["Privacy Policy", "/privacy"], ["Terms of Service", "/terms"], ["FAQ", "#"]].map(([label, href]) => (
                 <li key={label}>
-                  <Link href={href} className="hover:text-emerald-600 transition-colors">{label}</Link>
+                  <Link href={href} className="transition-colors hover:text-emerald-400">{label}</Link>
                 </li>
               ))}
             </ul>
           </div>
         </div>
 
-        <div className="mt-8 flex flex-col gap-2 border-t border-slate-200 pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} StayHub. Direct rentals with clear steps.</p>
-          <p>Designed to be easy for first-time renters and owners.</p>
+        <div className="mt-12 flex flex-col gap-4 border-t border-white/5 pt-8 text-xs text-white/40 sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} StayHub Technologies. India&apos;s zero-brokerage rental platform.</p>
+          <div className="flex gap-6">
+            <Link href="/privacy" className="hover:text-emerald-400 transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-emerald-400 transition-colors">Terms</Link>
+          </div>
         </div>
       </div>
     </footer>
@@ -734,191 +875,300 @@ function Footer() {
 export default function HomePage() {
   const router = useRouter();
   const { user, clearSession } = useAuthStore();
-  const [showSignInMenu, setShowSignInMenu] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authRole, setAuthRole] = useState<"TENANT" | "OWNER">("TENANT");
   const [searchQuery, setSearchQuery] = useState("");
+  const [publicPropertyType, setPublicPropertyType] = useState("");
+  const [publicMaxRent, setPublicMaxRent] = useState("");
+  const [pendingSearchPath, setPendingSearchPath] = useState<string | undefined>();
+  const {
+    data: publicProperties,
+    isLoading: isPublicPropertiesLoading,
+    isError: isPublicPropertiesError,
+  } = useQuery({
+    queryKey: ["properties", "public-home"],
+    queryFn: async () => {
+      const res = await http.get("/properties/search/?limit=6&ordering=-created_at");
+      return (res.data.results ?? res.data) as PropertyListItem[];
+    },
+    enabled: !user,
+    retry: 1,
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const savedSearchPath = window.localStorage.getItem(PENDING_SEARCH_STORAGE_KEY);
+    if (savedSearchPath) setPendingSearchPath(savedSearchPath);
+  }, []);
 
   const handleSignOut = () => { clearSession(); router.push("/"); };
+  const buildPropertySearchPath = (next?: { city?: string; property_type?: string; max_rent?: string }) => {
+    const params = new URLSearchParams();
+    const city = next?.city ?? searchQuery.trim();
+    const propertyType = next?.property_type ?? publicPropertyType;
+    const maxRent = next?.max_rent ?? publicMaxRent;
+
+    if (city) params.set("city", city);
+    if (propertyType) params.set("property_type", propertyType);
+    if (maxRent) params.set("max_rent", maxRent);
+
+    const queryString = params.toString();
+    return queryString ? `/properties?${queryString}` : "/properties";
+  };
+  const requestSearchAuth = (path: string) => {
+    setPendingSearchPath(path);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(PENDING_SEARCH_STORAGE_KEY, path);
+    }
+    setAuthRole("TENANT");
+    setAuthModalOpen(true);
+  };
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    router.push(searchQuery.trim() ? `/properties?search=${encodeURIComponent(searchQuery.trim())}` : "/properties");
+    requestSearchAuth(buildPropertySearchPath());
   };
 
   if (user) return <LoggedInHome user={user} onSignOut={handleSignOut} />;
 
   return (
-    <div className="min-h-screen bg-[#f5f8f6] font-sans text-slate-900">
-      <Navbar showSignInMenu={showSignInMenu} setShowSignInMenu={setShowSignInMenu} />
+    <div className="min-h-screen bg-[#090e0c] font-sans text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-200">
+      <Navbar onOpenAuth={(role) => { setAuthRole(role); setAuthModalOpen(true); }} />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden border-b border-slate-200 bg-[linear-gradient(180deg,#f7fcf8_0%,#eef7f2_100%)]">
-        <div className="absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_45%),radial-gradient(circle_at_top_right,rgba(20,184,166,0.12),transparent_40%)]" />
-        <div className="relative mx-auto grid max-w-7xl gap-10 px-5 py-16 sm:px-8 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-20">
-          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-sm font-medium text-emerald-700 shadow-sm">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              Easy rental search for tenants and owners
-            </div>
-            <h1 className="max-w-3xl text-4xl font-bold leading-tight text-slate-900 sm:text-5xl md:text-6xl">
-              Find a home or list a property without the usual confusion.
-            </h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-              StayHub helps people search homes, speak to owners directly, and understand the next step clearly. No technical language, no broker pressure, and no unnecessary clutter.
-            </p>
+      <section className="relative min-h-[90vh] flex items-center pt-24 pb-12 overflow-hidden" id="top">
+        {/* Background Layers */}
+        <div className="absolute inset-0 z-0">
+          {/* Dark overlay base */}
+          <div className="absolute inset-0 bg-[#090e0c]" />
+          {/* Ambient glowing orbs */}
+          <div className="absolute top-0 right-[10%] w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-[120px] mix-blend-screen pointer-events-none" />
+          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-teal-600/10 rounded-full blur-[100px] mix-blend-screen pointer-events-none" />
+          {/* Background Image */}
+          <div className="absolute inset-x-0 top-0 h-[85vh] opacity-30 mask-image:linear-gradient(to_bottom,black_40%,transparent_100%)">
+            <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=2000&q=80" alt="Luxury home interior" className="w-full h-full object-cover object-center" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#090e0c]/50 via-[#090e0c]/80 to-[#090e0c]" />
+          </div>
+        </div>
 
-            <motion.form
-              onSubmit={handleSearch}
-              initial={{ opacity: 0, y: 18 }}
+        {/* Content */}
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-5 sm:px-8">
+          <div className="max-w-3xl mb-12">
+            <motion.h1
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.45 }}
-              className="mt-8 rounded-3xl border border-slate-200 bg-white p-3 shadow-[0_20px_60px_rgba(15,23,42,0.08)]"
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              className="text-[3rem] sm:text-[4.5rem] lg:text-[5.5rem] leading-[1.05] font-bold text-white tracking-tight mb-6"
             >
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <label className="flex flex-1 items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3">
-                  <Search className="h-5 w-5 shrink-0 text-slate-400" />
+              Find your perfect <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">stay anywhere</span> <Sparkles className="inline-block w-10 h-10 sm:w-12 sm:h-12 text-emerald-400/80 -mt-6" />
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.7, ease: "easeOut" }}
+              className="text-lg sm:text-xl text-white/60 max-w-xl font-medium leading-relaxed"
+            >
+              Discover handpicked properties for rent that match your lifestyle. Zero brokerage, verified listings, seamless experience.
+            </motion.p>
+          </div>
+
+          {/* Search Floating Glass Container */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="w-full"
+          >
+            <form
+              onSubmit={handleSearch}
+              className="relative rounded-3xl sm:rounded-full bg-[#151c19]/60 backdrop-blur-2xl border border-white/10 p-2 sm:p-3 shadow-[0_30px_60px_rgba(0,0,0,0.4)] flex flex-col sm:flex-row items-center gap-2 max-w-5xl"
+            >
+              {/* Where */}
+              <div className="flex-1 w-full sm:w-auto px-5 py-3 sm:py-2 hover:bg-white/5 rounded-2xl sm:rounded-full transition-colors cursor-text group relative after:hidden sm:after:block after:absolute after:right-0 after:top-1/2 after:-translate-y-1/2 after:w-px after:h-8 after:bg-white/10">
+                <label htmlFor="hero-search" className="block text-[11px] font-bold text-white/90 uppercase tracking-widest mb-1 cursor-text">Where</label>
+                <div className="flex items-center gap-2">
                   <input
+                    id="hero-search"
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by city, area, or property type"
-                    className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                    placeholder="Search by city, locality..."
+                    className="w-full bg-transparent text-sm sm:text-base text-white placeholder-white/40 outline-none font-medium"
                   />
-                </label>
+                  <ChevronDown className="w-4 h-4 text-white/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </div>
+
+              {/* Property Type */}
+              <div className="flex-1 w-full sm:w-auto px-5 py-3 sm:py-2 hover:bg-white/5 rounded-2xl sm:rounded-full transition-colors relative after:hidden sm:after:block after:absolute after:right-0 after:top-1/2 after:-translate-y-1/2 after:w-px after:h-8 after:bg-white/10">
+                <label className="block text-[11px] font-bold text-white/90 uppercase tracking-widest mb-1">Property Type</label>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={publicPropertyType}
+                    onChange={(e) => setPublicPropertyType(e.target.value)}
+                    className="w-full bg-transparent text-sm sm:text-base text-white outline-none font-medium appearance-none cursor-pointer [&>option]:bg-[#111614] [&>option]:text-white"
+                  >
+                    <option value="">Select type</option>
+                    <option value="PG">PG / Hostel</option>
+                    <option value="1BHK">1 BHK</option>
+                    <option value="2BHK">2 BHK</option>
+                    <option value="3BHK">3 BHK</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-white/40 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Budget */}
+              <div className="flex-1 w-full sm:w-auto px-5 py-3 sm:py-2 hover:bg-white/5 rounded-2xl sm:rounded-full transition-colors relative">
+                <label className="block text-[11px] font-bold text-white/90 uppercase tracking-widest mb-1">Max Budget</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={publicMaxRent}
+                    onChange={(e) => setPublicMaxRent(e.target.value)}
+                    placeholder="Any budget"
+                    className="w-full bg-transparent text-sm sm:text-base text-white placeholder-white/40 outline-none font-medium"
+                  />
+                  <ChevronDown className="w-4 h-4 text-white/40 opacity-0 transition-opacity" />
+                </div>
+              </div>
+
+              {/* Search Button */}
+              <button
+                type="submit"
+                className="w-full sm:w-auto mt-2 sm:mt-0 px-8 py-4 sm:py-4 bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl sm:rounded-full font-bold text-base transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] flex items-center justify-center gap-2 shrink-0"
+              >
+                <Search size={18} />
+                <span>Search</span>
+              </button>
+            </form>
+
+            {/* Popular Searches Pills */}
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <span className="text-sm font-medium text-white/50 mr-2">Popular searches:</span>
+              {[
+                { label: "Mumbai", params: { city: "Mumbai" } },
+                { label: "Bangalore", params: { city: "Bengaluru" } },
+                { label: "Delhi", params: { city: "Delhi NCR" } },
+                { label: "Hyderabad", params: { city: "Hyderabad" } },
+                { label: "Noida", params: { city: "Noida" } },
+                { label: "PG / Hostel", params: { property_type: "PG" } },
+                { label: "Under ₹20K", params: { max_rent: "20000" } },
+                { label: "Fully Furnished", params: {} },
+              ].map((filter) => (
                 <button
-                  type="submit"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+                  key={filter.label}
+                  onClick={() => {
+                    requestSearchAuth(buildPropertySearchPath(filter.params));
+                  }}
+                  className="px-4 py-1.5 rounded-full text-xs font-medium bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 transition-all hover:text-white"
                 >
-                  Search homes
-                  <ArrowRight className="h-4 w-4" />
+                  {filter.label}
                 </button>
-              </div>
-            </motion.form>
-
-            <div className="mt-5 flex flex-wrap items-center gap-2 text-sm text-slate-500">
-              <span>Popular cities:</span>
-              {POPULAR_CITIES.slice(0, 6).map((city) => (
-                <Link
-                  key={city}
-                  href={`/properties?city=${city}`}
-                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 hover:border-emerald-300 hover:text-emerald-700"
-                >
-                  <MapPin className="h-3.5 w-3.5" />
-                  {city}
-                </Link>
               ))}
-            </div>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/properties" className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
-                Browse all homes
-              </Link>
-              <Link href="/auth?role=OWNER" className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:border-emerald-300 hover:text-emerald-700">
-                List your property
-              </Link>
-            </div>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.45 }}>
-            <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
-              <div className="rounded-3xl bg-slate-900 p-6 text-white">
-                <p className="text-sm font-medium text-emerald-300">Why people choose StayHub</p>
-                <div className="mt-5 space-y-4">
-                  {[
-                    "See rental options in simple language.",
-                    "Talk directly to the owner.",
-                    "Save brokerage and avoid middlemen.",
-                    "Use one place for search, shortlist, and contact.",
-                  ].map((item) => (
-                    <div key={item} className="flex items-start gap-3 rounded-2xl bg-white/5 px-4 py-3">
-                      <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
-                      <p className="text-sm leading-6 text-slate-200">{item}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-slate-200 bg-[#f7fbf8] p-4">
-                  <p className="text-sm font-semibold text-slate-900">For tenants</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">Search verified homes, compare options, and contact owners directly.</p>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-[#fbfaf6] p-4">
-                  <p className="text-sm font-semibold text-slate-900">For owners</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">Post your property, receive genuine leads, and manage conversations in one place.</p>
-                </div>
-              </div>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* ── Stats strip ─────────────────────────────────────────────────── */}
-      <section className="border-b border-slate-200 bg-white">
-        <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}
-          className="relative mx-auto grid max-w-7xl grid-cols-2 gap-4 px-5 py-8 sm:px-8 sm:grid-cols-4"
-        >
-          {STATS.map((s) => (
-            <motion.div key={s.label} variants={fadeUp} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-center">
-              <p className="text-2xl font-black text-slate-900 sm:text-3xl">{s.value}</p>
-              <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500">{s.label}</p>
+      {/* ── Featured Properties ───────────────────────────────────────────── */}
+      <section className="py-20 relative z-10" id="featured">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+          <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-white/10 pb-6">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3">Featured Properties <Sparkles className="w-6 h-6 text-emerald-400" /></h2>
+              <p className="mt-2 text-white/50 font-medium">Handpicked stays for you</p>
+            </div>
+            <Link
+              href="/properties"
+              className="group inline-flex items-center gap-2 text-sm font-semibold text-white/80 transition-colors hover:text-white"
+            >
+              View all properties
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </div>
+
+          {isPublicPropertiesLoading ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-96 rounded-3xl border border-white/5 bg-[#111614] animate-pulse relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
+                </div>
+              ))}
+            </div>
+          ) : isPublicPropertiesError ? (
+            <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6 text-center text-sm font-medium text-red-400">
+              Could not load properties right now.
+            </div>
+          ) : (publicProperties?.length ?? 0) > 0 ? (
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              {publicProperties?.map((property, idx) => (
+                <motion.div key={property.id} variants={fadeUp}>
+                  <PublicPropertyCard p={property} index={idx} onAuthRequired={() => requestSearchAuth("/properties")} />
+                </motion.div>
+              ))}
             </motion.div>
-          ))}
-        </motion.div>
+          ) : (
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-12 text-center backdrop-blur-sm">
+              <Building2 className="mx-auto mb-4 h-10 w-10 text-white/20" />
+              <p className="font-semibold text-white">No properties are listed yet</p>
+            </div>
+          )}
+        </div>
       </section>
 
-      {/* ── How it works ────────────────────────────────────────────────── */}
-      <section id="how-it-works" className="py-18 bg-[#f5f8f6]">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 py-18">
-          <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} className="text-center mb-14">
-            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-3">Simple steps</p>
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">How to use StayHub</h2>
-            <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-              The homepage now focuses on one clear path: search, talk, and decide. This is easier for people who just want to get started quickly.
-            </p>
-          </motion.div>
-          <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}
-            className="grid gap-6 md:grid-cols-3"
-          >
-            {HOW_IT_WORKS.map((step) => (
-              <motion.div key={step.num} variants={fadeUp}>
-                <div className="h-full rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
-                  <div className="mb-5 flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-600 shadow-lg shadow-emerald-600/20">
-                      <step.icon className="h-5 w-5 text-white" />
-                    </div>
-                    <span className="text-4xl font-black text-slate-100">{step.num}</span>
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900">{step.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{step.desc}</p>
+      {/* ── Trust / Features ───────────────────────────────────────────────── */}
+      <section className="py-12 border-y border-white/10 bg-[#111614]/50">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[
+              { icon: Shield, title: "Verified & Trusted", desc: "All properties are verified" },
+              { icon: CheckCircle2, title: "Best Price Guarantee", desc: "Get the best deals" },
+              { icon: Headphones, title: "24/7 Support", desc: "We&apos;re here to help" },
+              { icon: LockKeyhole, title: "Secure & Easy", desc: "Hassle-free experience" },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                  <item.icon className="w-5 h-5" />
                 </div>
-              </motion.div>
+                <div>
+                  <h4 className="text-white font-semibold text-sm">{item.title}</h4>
+                  <p className="text-white/50 text-xs mt-0.5">{item.desc}</p>
+                </div>
+              </div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* ── Browse by type ───────────────────────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-5 py-18 sm:px-8">
-        <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} className="text-center mb-14">
-          <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-3">Start from something familiar</p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">Browse by property type</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-            Instead of showing too many options at once, the homepage gives quick entry points based on the kind of place people usually look for first.
+      <section className="max-w-7xl mx-auto px-5 py-20 sm:px-8" id="categories">
+        <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} className="text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white">Browse by property type</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-white/50 sm:text-base">
+            Find exactly what you are looking for.
           </p>
         </motion.div>
         <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}
           className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
         >
           {CATEGORIES.map((cat) => {
-            const c = CAT_COLORS[cat.color];
             return (
               <motion.div key={cat.type} variants={fadeUp}>
                 <Link
-                  href={`/properties?type=${cat.type}`}
-                  className={`group block rounded-3xl border border-slate-200 bg-white p-5 text-center transition-all hover:shadow-lg ${c.border} ${c.bg}`}
+                  href={`/properties?property_type=${cat.type}`}
+                  className={`group block rounded-3xl border border-white/10 bg-[#111614] p-5 text-center transition-all hover:bg-white/5 hover:border-emerald-500/30 hover:shadow-[0_0_20px_rgba(16,185,129,0.15)] hover:-translate-y-1`}
                 >
-                  <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-3xl ${c.icon}`}>{cat.emoji}</div>
-                  <p className={`mt-4 text-sm font-semibold text-slate-900 ${c.text}`}>{cat.label}</p>
-                  <p className="mt-1 text-xs text-slate-500">{cat.sub}</p>
+                  <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-3xl bg-white/5 group-hover:scale-110 transition-transform`}>{cat.emoji}</div>
+                  <p className={`mt-4 text-sm font-semibold text-white group-hover:text-emerald-400 transition-colors`}>{cat.label}</p>
+                  <p className="mt-1 text-[11px] text-white/40">{cat.sub}</p>
                 </Link>
               </motion.div>
             );
@@ -926,116 +1176,84 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      {/* ── Why people use it ───────────────────────────────────────────── */}
-      <section className="border-y border-slate-200 bg-white py-18">
+      {/* ── Testimonials ────────────────────────────────────────────────── */}
+      <section className="py-20 bg-[#111614] border-t border-white/5">
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} className="mb-12 text-center">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-emerald-600">Why it feels easier</p>
-            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">Built for normal users, not just heavy app users</h2>
+          <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} className="text-center mb-12">
+            <p className="text-xs font-semibold text-emerald-400 uppercase tracking-widest mb-3">Testimonials</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white">What Our Users Say</h2>
           </motion.div>
-          <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+
+          <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          >
             {[
-              { icon: Users, title: "Direct contact", desc: "You speak with the owner directly instead of passing through multiple people." },
-              { icon: Shield, title: "Clear information", desc: "The homepage now uses simpler wording so the first step is obvious." },
-              { icon: MessageSquare, title: "Fewer decisions at once", desc: "Search, categories, and actions are grouped in a more readable order." },
-              { icon: TrendingUp, title: "Useful for owners too", desc: "Owners can quickly move from the homepage to listing and lead-management actions." },
-            ].map((item) => (
-              <motion.div key={item.title} variants={fadeUp} className="rounded-3xl border border-slate-200 bg-[#f8fbf9] p-6">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                  <item.icon className="h-5 w-5" />
+              {
+                rating: 5,
+                text: "Found my perfect apartment in just 3 days. The direct contact with the owner made everything so easy. Highly recommend!",
+                name: "Priya Sharma",
+                role: "Student",
+                avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=priya",
+              },
+              {
+                rating: 5,
+                text: "Zero brokerage is a game changer. Saved so much money compared to traditional portals. The verification process gave me peace of mind.",
+                name: "Rajesh Kumar",
+                role: "Young Professional",
+                avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=rajesh",
+              },
+              {
+                rating: 5,
+                text: "The support team was incredibly helpful. They answered all my questions and even helped me negotiate with the owner. Great experience!",
+                name: "Ananya Patel",
+                role: "Working Mom",
+                avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=ananya",
+              },
+            ].map((testimonial, i) => (
+              <motion.div key={i} variants={fadeUp}>
+                <div className="rounded-3xl p-6 transition-all hover:bg-white/[0.04] bg-[#090e0c] border border-white/10 hover:border-emerald-500/20 group hover:-translate-y-1 h-full flex flex-col">
+                  {/* Stars */}
+                  <div className="flex gap-1 mb-4">
+                    {Array(testimonial.rating).fill(0).map((_, j) => (
+                      <Star key={j} size={14} className="fill-emerald-400 text-emerald-400" />
+                    ))}
+                  </div>
+
+                  <p className="text-sm leading-relaxed mb-6 text-white/70 italic flex-1">
+                    &quot;{testimonial.text}&quot;
+                  </p>
+
+                  <div className="flex items-center gap-3 pt-4 border-t border-white/5">
+                    <img
+                      src={testimonial.avatar}
+                      alt={testimonial.name}
+                      className="w-10 h-10 rounded-full object-cover border border-white/10 bg-white/5"
+                    />
+                    <div>
+                      <p className="text-sm font-semibold text-white">{testimonial.name}</p>
+                      <p className="text-[11px] text-white/40">{testimonial.role}</p>
+                    </div>
+                  </div>
                 </div>
-                <h3 className="mt-4 text-base font-semibold text-slate-900">{item.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{item.desc}</p>
               </motion.div>
             ))}
           </motion.div>
         </div>
       </section>
 
-      {/* ── Dual CTA ────────────────────────────────────────────────────── */}
-      <section id="for-owners" className="py-18">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}
-            className="grid md:grid-cols-2 gap-6"
-          >
-            {/* Tenant */}
-            <motion.div variants={fadeUp}>
-              <div className="h-full rounded-[30px] bg-gradient-to-br from-emerald-600 to-emerald-700 p-8 text-white shadow-[0_24px_80px_rgba(5,150,105,0.22)]">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15">
-                  <Search className="h-6 w-6" />
-                </div>
-                <h3 className="mt-6 text-2xl font-bold">Looking for a home?</h3>
-                <p className="mt-3 max-w-md text-sm leading-7 text-emerald-50">
-                  Start with a city or area, check the type of property you want, and contact the owner when a listing feels right.
-                </p>
-                <ul className="mt-6 space-y-3 text-sm text-emerald-50">
-                  {[
-                    "Easy search from the homepage",
-                    "Direct owner contact",
-                    "No brokerage middle step",
-                  ].map((line) => (
-                    <li key={line} className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 shrink-0" />
-                      {line}
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/properties" className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">
-                  Browse homes
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            </motion.div>
-
-            {/* Owner */}
-            <motion.div variants={fadeUp}>
-              <div className="h-full rounded-[30px] border border-slate-200 bg-white p-8 shadow-sm">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white">
-                  <Building2 className="h-6 w-6" />
-                </div>
-                <h3 className="mt-6 text-2xl font-bold text-slate-900">Want to list your property?</h3>
-                <p className="mt-3 max-w-md text-sm leading-7 text-slate-600">
-                  Add your listing, receive enquiries from interested tenants, and manage your leads in one place without extra complexity.
-                </p>
-                <ul className="mt-6 space-y-3 text-sm text-slate-600">
-                  {[
-                    "Simple first step for owners",
-                    "Quick path to add a listing",
-                    "Built-in messages and analytics",
-                  ].map((line) => (
-                    <li key={line} className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />
-                      {line}
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/auth?role=OWNER" className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
-                  Start listing
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ── Closing message ─────────────────────────────────────────────── */}
-      <section className="bg-[#eef7f2] py-18">
-        <div className="max-w-5xl mx-auto px-5 sm:px-8 text-center">
-          <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}>
-            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">A clearer homepage for first-time users</h2>
-            <p className="mx-auto mt-4 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-              The homepage now explains what StayHub does in plain language, gives one main search action, and keeps the owner path visible without making the page feel crowded.
-            </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Link href="/properties" className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700">Start searching</Link>
-              <Link href="/auth" className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:border-emerald-300 hover:text-emerald-700">Sign in or create account</Link>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
       <Footer />
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialRole={authRole}
+        redirectTo={pendingSearchPath}
+        onAuthenticated={() => {
+          if (typeof window !== "undefined") {
+            window.localStorage.removeItem(PENDING_SEARCH_STORAGE_KEY);
+          }
+        }}
+      />
     </div>
+
   );
 }

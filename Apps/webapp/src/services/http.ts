@@ -3,7 +3,7 @@ import axios from "axios";
 import { API_BASE_URL, APP_SECRET } from "@/config/env";
 import { logger } from "@/lib/logger";
 import { getDeviceId } from "@/lib/device";
-import { signRequest } from "@/lib/request-signer";
+import { getSignablePath, signRequest } from "@/lib/request-signer";
 import { useAuthStore } from "@/store/auth-store";
 import { refreshAuthToken } from "@/modules/auth/api";
 import { broadcastSessionExpired, broadcastTokenRefresh } from "@/hooks/use-session-sync";
@@ -204,7 +204,8 @@ http.interceptors.request.use(async (config) => {
       if (!ALLOWED_HOSTS.has(fullUrl.hostname)) {
         throw new Error(`Request to disallowed host blocked: ${fullUrl.hostname}`);
       }
-      const signed = await signRequest(config.method ?? "get", fullUrl.pathname, APP_SECRET);
+      const signablePath = getSignablePath(config.url, config.baseURL ?? API_BASE_URL);
+      const signed = await signRequest(config.method ?? "get", signablePath, APP_SECRET);
       if (signed) {
         config.headers["X-App-Signature"] = signed["X-App-Signature"];
       }

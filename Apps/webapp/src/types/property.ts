@@ -88,6 +88,8 @@ export interface PropertyListQuery {
   state?: string;
   locality?: string;
   property_type?: string;
+  furnishing?: string;
+  preferred_tenant?: string;
   min_rent?: number;
   max_rent?: number;
   mine?: boolean;

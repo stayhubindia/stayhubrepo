@@ -1,0 +1,223 @@
+Please check this image according to this image i want hompege:Before making ANY UI changes, first deeply inspect and understand the existing project structure.
+
+IMPORTANT FIRST STEP:
+Analyze the backend and frontend architecture before implementation.
+
+You MUST first inspect:
+- server APIs
+- Django models
+- serializers
+- existing endpoints
+- authentication flow
+- property schemas
+- user roles
+- current frontend architecture
+- existing components
+- state management
+- query structure
+- routing
+- current homepage implementation
+
+DO NOT hallucinate fields or APIs.
+DO NOT invent fake backend data structures.
+Everything must be implemented according to the actual backend models and serializers already available in the project.
+
+After understanding the architecture, redesign and implement the AUTHENTICATED USER HOMEPAGE using the attached design image as the primary visual direction.
+
+GOAL:
+Create a world-class authenticated home dashboard experience for StayHub.
+
+This is the homepage AFTER:
+- user login
+- authentication
+- onboarding
+
+The dashboard should feel:
+- premium
+- cinematic
+- personalized
+- modern
+- immersive
+- productivity-focused
+- intelligent
+- luxury
+
+Design inspiration:
+- Airbnb
+- Linear
+- Apple
+- Notion
+- modern SaaS dashboards
+- luxury real estate platforms
+
+RESPONSIVENESS:
+Fully responsive for:
+- Mobile
+- Tablet
+- Desktop
+
+Desktop:
+- widescreen cinematic dashboard
+- elegant sidebar
+- layered sections
+- premium spacing
+
+Tablet:
+- adaptive responsive layout
+- collapsible navigation
+
+Mobile:
+- app-like experience
+- bottom-friendly interactions
+- responsive cards
+- compact dashboard hierarchy
+
+TECH STACK:
+- Next.js
+- Tailwind CSS
+- Framer Motion
+- existing project architecture only
+
+IMPORTANT:
+Preserve:
+- existing API integration
+- auth flow
+- query logic
+- backend compatibility
+- serializers
+- routing behavior
+
+Focus mainly on:
+- dashboard redesign
+- responsive UX
+- component architecture
+- visual polish
+- personalization
+
+AUTHENTICATED HOMEPAGE FEATURES:
+
+SIDEBAR:
+Create premium left sidebar navigation:
+- Home
+- Browse Properties
+- Wishlist
+- Saved Searches
+- Messages
+- Notifications
+- Reviews
+- Payments
+- Host Dashboard (if owner)
+- Settings
+
+Sidebar should:
+- collapse on tablet/mobile
+- have glassmorphism feel
+- elegant active states
+- smooth transitions
+
+TOPBAR:
+Premium top navigation:
+- global search
+- notifications
+- messages
+- user profile
+- quick actions
+- responsive behavior
+
+HERO SECTION:
+Personalized welcome section:
+- dynamic greeting
+- user-first experience
+- cinematic background
+- premium search experience
+- responsive layout
+
+SEARCH EXPERIENCE:
+Redesign search UX beautifully:
+- floating glass search panel
+- smooth interactions
+- premium field styling
+- modern filters
+- interactive states
+- responsive layouts
+
+PROPERTY SECTIONS:
+Implement dynamic personalized sections based on actual API data:
+- Featured for you
+- Recently viewed
+- Recommended properties
+- Saved searches
+- Nearby stays
+- Trending listings
+- Continue browsing
+
+IMPORTANT:
+Use REAL backend fields and serializers.
+Do not hardcode fake structures.
+
+PROPERTY CARDS:
+Create premium modern cards:
+- cinematic imagery
+- clean hierarchy
+- hover animations
+- responsive layouts
+- pricing emphasis
+- elegant metadata
+- wishlist interactions
+- subtle glow effects
+
+VISUAL STYLE:
+- dark luxury aesthetic
+- emerald/teal accents
+- soft gradients
+- cinematic lighting
+- layered depth
+- glassmorphism
+- premium shadows
+- smooth motion
+
+TYPOGRAPHY:
+- strong hierarchy
+- cinematic headings
+- softer secondary text
+- premium readability
+
+ANIMATIONS:
+Use Framer Motion elegantly:
+- reveal animations
+- hover effects
+- sidebar transitions
+- floating effects
+- subtle cinematic motion
+
+DASHBOARD EXPERIENCE:
+The authenticated homepage should feel:
+- personalized
+- alive
+- modern
+- high-end
+- intelligent
+- immersive
+
+NOT:
+- generic admin panel
+- crowded dashboard
+- old-style property portal
+
+CODE QUALITY:
+- modular
+- reusable
+- production-ready
+- scalable
+- clean architecture
+- responsive-first
+
+IMPORTANT FINAL INSTRUCTION:
+First inspect and understand:
+- APIs
+- serializers
+- models
+- backend responses
+- frontend architecture
+
+THEN implement the redesigned authenticated homepage according to the attached image and existing system architecture., server path: /home/durgesh/Desktop/stayhubrepo/Server

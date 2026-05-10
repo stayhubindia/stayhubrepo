@@ -91,7 +91,13 @@ class WebSocketService {
       }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
+      logger.warn("WebSocket closed", {
+        code: event.code,
+        reason: event.reason || "none",
+        wasClean: event.wasClean,
+        conversationId,
+      });
       const shouldReconnect = !this.intentionallyDisconnected && this.conversationId === conversationId;
 
       if (shouldReconnect) {
@@ -104,8 +110,10 @@ class WebSocketService {
     };
 
     ws.onerror = (error) => {
-      // Use project logger instead of raw console.error (TASK-19)
-      logger.error("WebSocket error", { detail: String(error) });
+      logger.error("WebSocket error", {
+        detail: error instanceof Event ? "browser websocket event" : String(error),
+        conversationId,
+      });
       toast.error("Connection error");
     };
 

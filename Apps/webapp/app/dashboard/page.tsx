@@ -41,15 +41,15 @@ const statusTone: Record<string, string> = {
 
 export default function DashboardPage() {
   const { user, isAllowed } = useRequireAuth();
+  const isOwner = user?.role === "OWNER";
   const favoritesQuery = useFavorites(user?.role === "TENANT");
-  const propertiesQuery = useMyProperties();
+  const propertiesQuery = useMyProperties(isOwner);
 
   if (!isAllowed || !user) {
     return null;
   }
 
   const firstName = user.first_name || user.email?.split("@")[0] || "there";
-  const isOwner = user.role === "OWNER";
   const joinedLabel = formatMonthYear(user.date_joined);
   const initials = `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.trim().toUpperCase() || user.email?.[0]?.toUpperCase() || "U";
 

@@ -6,6 +6,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.openapi import AutoSchema
@@ -103,6 +104,41 @@ class PropertyViewSet(viewsets.ModelViewSet):
             return apply_search(queryset, search_term)
 
         return apply_search(queryset.filter(status="ACTIVE"), search_term)
+
+    def _parse_public_limit(self, request):
+        limit = request.query_params.get("limit")
+        try:
+            limit = int(limit) if limit else None
+        except (TypeError, ValueError) as exc:
+            raise ValidationError("limit must be an integer") from exc
+
+        if limit is not None and (limit < 1 or limit > 24):
+            raise ValidationError("limit must be between 1 and 24")
+
+        return limit
+
+    def _public_search_response(self, request):
+        limit = self._parse_public_limit(request)
+        search_term = request.query_params.get("q") or request.query_params.get("search")
+        queryset = apply_search(
+            Property.objects.select_related("location")
+            .prefetch_related("amenities", "images")
+            .filter(status="ACTIVE"),
+            search_term,
+        )
+        queryset = self.filter_queryset(queryset)
+
+        if limit is not None:
+            serializer = PropertyListSerializer(queryset[:limit], many=True)
+            return Response(serializer.data)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = PropertyListSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = PropertyListSerializer(queryset, many=True)
+        return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
         serializer = PropertySerializer(data=request.data)
@@ -233,6 +269,14 @@ class PropertyViewSet(viewsets.ModelViewSet):
         serializer = PropertyListSerializer(qs, many=True)
         cache.set(cache_key, serializer.data, getattr(settings, "PROPERTY_TRENDING_CACHE_TTL_SECONDS", 60))
         return Response(serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="public", permission_classes=[AllowAny])
+    def public(self, request):
+        return self._public_search_response(request)
+
+    @action(detail=False, methods=["get"], url_path="search", permission_classes=[AllowAny])
+    def search(self, request):
+        return self._public_search_response(request)
 
     @action(detail=False, methods=["get"], url_path="cached-list")
     def cached_list(self, request):

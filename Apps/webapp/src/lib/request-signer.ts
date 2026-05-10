@@ -24,6 +24,7 @@
  */
 
 const _enc = new TextEncoder();
+const _schemePattern = /^[a-zA-Z][a-zA-Z\d+\-.]*:/;
 
 async function _importKey(secret: string): Promise<CryptoKey> {
   return crypto.subtle.importKey(
@@ -44,6 +45,22 @@ function _bufToHex(buf: ArrayBuffer): string {
 export type SignedHeaders = {
   "X-App-Signature": string;
 };
+
+export function getSignablePath(requestUrl: string | undefined, baseUrl: string): string {
+  const base = new URL(baseUrl);
+  const rawUrl = requestUrl?.trim() || "/";
+
+  if (_schemePattern.test(rawUrl)) {
+    return new URL(rawUrl).pathname;
+  }
+
+  const normalizedBasePath = base.pathname.replace(/\/+$/, "");
+  const mergedPath = rawUrl.startsWith("/")
+    ? `${normalizedBasePath}${rawUrl}`
+    : `${normalizedBasePath}/${rawUrl}`;
+
+  return new URL(mergedPath, base.origin).pathname;
+}
 
 /**
  * Signs a request and returns the headers to inject.
