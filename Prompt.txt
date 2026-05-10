@@ -1,0 +1,168 @@
+IMPORTANT:
+
+This task is ONLY for the AUTHENTICATED USER HOMEPAGE.
+
+Meaning:
+After the user:
+- signs in
+- logs in
+- authenticates successfully
+
+they should land on this redesigned homepage/dashboard.
+
+This is NOT the public landing page.
+This is NOT the guest homepage.
+This is NOT the unauthenticated marketing page.
+
+This is the INTERNAL logged-in user homepage/dashboard experience.
+
+FIRST STEP (VERY IMPORTANT):
+Before implementing ANY UI changes:
+
+Carefully inspect and understand:
+- backend APIs
+- Django models
+- serializers
+- user roles
+- authentication flow
+- property schemas
+- existing endpoints
+- current frontend architecture
+- existing dashboard/homepage logic
+- query usage
+- reusable components
+
+DO NOT hallucinate API responses.
+DO NOT invent fields.
+DO NOT create fake structures.
+
+Everything must be implemented according to the REAL backend models, serializers, and APIs already present in the project.
+
+Then redesign and implement the AUTHENTICATED USER HOMEPAGE using the attached image as the visual design direction.
+
+GOAL:
+Create a premium modern logged-in dashboard homepage for StayHub users.
+
+The experience should feel:
+- personalized
+- cinematic
+- immersive
+- modern
+- intelligent
+- luxury
+- responsive
+
+Design inspiration:
+- Airbnb
+- Linear
+- Apple
+- modern SaaS dashboards
+- luxury real estate platforms
+
+RESPONSIVENESS:
+Must be fully responsive for:
+- Mobile
+- Tablet
+- Desktop
+
+Desktop:
+- widescreen cinematic dashboard
+- elegant spacing
+- layered sections
+- premium sidebar layout
+
+Tablet:
+- adaptive responsive layout
+- collapsible navigation
+
+Mobile:
+- app-like experience
+- touch-friendly dashboard
+- responsive cards
+- clean hierarchy
+
+TECH STACK:
+- Next.js
+- Tailwind CSS
+- Framer Motion
+
+IMPORTANT:
+Preserve:
+- existing API integrations
+- authentication flow
+- routing
+- query logic
+- backend compatibility
+
+Focus mainly on:
+- authenticated homepage/dashboard redesign
+- UI/UX improvements
+- responsive experience
+- component polish
+- personalization
+
+AUTHENTICATED HOMEPAGE FEATURES:
+
+SIDEBAR:
+Premium dashboard sidebar with:
+- Home
+- Browse Properties
+- Wishlist
+- Saved Searches
+- Messages
+- Notifications
+- Reviews
+- Payments
+- Host Dashboard (if owner)
+- Settings
+
+TOPBAR:
+Modern dashboard topbar:
+- global search
+- notifications
+- messages
+- user profile
+- quick actions
+
+HERO SECTION:
+Personalized welcome section:
+- dynamic greeting
+- premium search
+- cinematic layout
+- luxury atmosphere
+
+PROPERTY SECTIONS:
+Use REAL backend data for:
+- Recommended properties
+- Recently viewed
+- Saved searches
+- Nearby stays
+- Trending listings
+- Continue browsing
+
+PROPERTY CARDS:
+Premium dark luxury cards:
+- cinematic imagery
+- elegant metadata
+- hover effects
+- responsive layouts
+- wishlist interactions
+- pricing emphasis
+
+VISUAL STYLE:
+- dark luxury aesthetic
+- emerald/teal accents
+- glassmorphism
+- premium shadows
+- cinematic gradients
+- smooth motion
+
+ANIMATIONS:
+Use Framer Motion for:
+- smooth transitions
+- reveal animations
+- sidebar interactions
+- hover effects
+
+FINAL GOAL:
+Transform the current authenticated user homepage/dashboard into a world-class modern rental discovery experience using the attached image as inspiration while preserving real backend architecture and existing functionality.

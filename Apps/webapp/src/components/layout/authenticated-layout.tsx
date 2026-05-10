@@ -131,6 +131,7 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
   if (!user || isStandalone) return <>{children}</>;
 
   const isHome = pathname === "/";
+  const isDashboard = pathname === "/dashboard";
 
   const handleLogout = () => {
     broadcastLogout();
@@ -140,10 +141,10 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
+    <div className={`min-h-screen ${(isDashboard || isHome) ? "bg-black" : "bg-slate-50 pb-20"}`}>
 
-      {/* ── Top Header (hidden on home — home has its own navbar) ── */}
-      {!isHome && (
+      {/* ── Top Header (hidden on home/dashboard) ── */}
+      {(!isHome && !isDashboard) && (
         <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
           <div className="mx-auto flex h-14 max-w-screen-xl items-center justify-between gap-4 px-4">
 
@@ -291,6 +292,7 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
       <main>{children}</main>
 
       {/* ── Bottom Navigation ── */}
+      {(!isDashboard && !isHome) && (
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-screen-sm items-end justify-around px-2 pt-2 pb-[max(8px,env(safe-area-inset-bottom))]">
 
@@ -345,6 +347,7 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
 
         </div>
       </nav>
+      )}
     </div>
   );
 }

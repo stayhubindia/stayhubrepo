@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import {
-  Building2, Search, Shield, TrendingUp, Users, MapPin,
-  ArrowRight, CheckCircle, MessageSquare, ChevronDown,
-  LogOut, Menu, X, Bell, Plus, BarChart2, Heart, Eye, Home, Filter,
-  Headphones, Star, CheckCircle2, DollarSign, Calendar, UserRound,
-  BedDouble, Bath, Maximize2, Wifi, LockKeyhole, Sparkles,
+  Building2, Search, Shield, TrendingUp, Users, MapPin, ArrowRight, CheckCircle, MessageSquare, ChevronDown, ChevronRight, LogOut, Menu, X, Bell, Plus, BarChart2, Heart, Eye, Home, Filter, Headphones, Star, CheckCircle2, DollarSign, Calendar as CalendarIcon, UserRound, BedDouble, Bath, Maximize2, Wifi, LockKeyhole, Sparkles, AlertCircle, Bookmark, User as UserIcon
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth-store";
+import { EmptyState, ErrorState, LoadingState } from "@/components/ui/query-states";
+import { getApiErrorMessage } from "@/lib/api-error";
+import { useFavorites } from "@/modules/favorites/hooks";
+import { useMyProperties } from "@/modules/properties/hooks";
 import type { AppUser } from "@/types/auth";
 import { useQuery } from "@tanstack/react-query";
 import { http } from "@/services/http";
@@ -300,8 +300,19 @@ function PublicPropertyCard({ p, index = 0, onAuthRequired }: { p: PropertyListI
   );
 }
 
+
 function LoggedInHome({ user, onSignOut }: { user: AppUser; onSignOut: () => void }) {
-  const [showMenu, setShowMenu] = useState(false);
+  const router = useRouter();
+  const [searchCity, setSearchCity] = useState("");
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchCity.trim()) {
+      router.push(`/properties?city=${encodeURIComponent(searchCity.trim())}`);
+    } else {
+      router.push(`/properties`);
+    }
+  };
   const [activeType, setActiveType] = useState("ALL");
   const [currentLocationLabel, setCurrentLocationLabel] = useState<string>("");
 
@@ -316,402 +327,304 @@ function LoggedInHome({ user, onSignOut }: { user: AppUser; onSignOut: () => voi
   });
 
   const isOwner = user.role === "OWNER";
-  const initials = ((user.first_name?.[0] ?? "") + (user.last_name?.[0] ?? "")).toUpperCase() || user.email?.[0]?.toUpperCase() || "U";
   const firstName = user.first_name ?? user.email?.split("@")[0] ?? "there";
 
-  useEffect(() => {
-    const fallback = [user.location?.locality, user.location?.city, user.location?.state]
-      .filter(Boolean)
-      .join(", ");
-
-    if (fallback) {
-      setCurrentLocationLabel(fallback);
-    }
-
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async ({ coords }) => {
-        const { latitude, longitude } = coords;
-
-        try {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
-            {
-              headers: {
-                Accept: "application/json",
-              },
-            },
-          );
-
-          if (!response.ok) {
-            setCurrentLocationLabel(fallback || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
-            return;
-          }
-
-          const data = (await response.json()) as {
-            address?: {
-              road?: string;
-              suburb?: string;
-              neighbourhood?: string;
-              city?: string;
-              town?: string;
-              village?: string;
-              state?: string;
-            };
-          };
-
-          const address = data.address;
-          const precise = [
-            address?.road,
-            address?.suburb ?? address?.neighbourhood,
-            address?.city ?? address?.town ?? address?.village,
-            address?.state,
-          ]
-            .filter(Boolean)
-            .join(", ");
-
-          setCurrentLocationLabel(precise || fallback || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
-        } catch {
-          setCurrentLocationLabel(fallback || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
-        }
-      },
-      () => {
-        setCurrentLocationLabel((prev) => prev || fallback || "Location unavailable");
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 7000,
-        maximumAge: 10 * 60 * 1000,
-      },
-    );
-  }, [user.location?.city, user.location?.locality, user.location?.state]);
-
-  const TYPE_FILTERS = ["ALL", "PG", "1RK", "1BHK", "2BHK", "HOUSE", "COMMERCIAL"];
-  const filtered = activeType === "ALL" ? (properties ?? []) : (properties ?? []).filter(p => p.property_type === activeType);
-
-  const OWNER_ACTIONS = [
-    { icon: Plus, label: "Add Listing", sub: "Post a property", href: "/my-ads", color: "emerald" },
-    { icon: BarChart2, label: "Analytics", sub: "Views & leads", href: "/analytics", color: "blue" },
-    { icon: MessageSquare, label: "Messages", sub: "Tenant inquiries", href: "/messages", color: "violet" },
-    { icon: TrendingUp, label: "My Listings", sub: "Manage your ads", href: "/my-ads", color: "amber" },
+  const SIDEBAR_ITEMS = [
+    { icon: Home, label: "Home", href: "/", active: true },
+    { icon: Search, label: "Browse Properties", href: "/properties" },
+    { icon: CalendarIcon, label: "My Bookings", href: "/bookings" },
+    { icon: Heart, label: "Wishlist", href: "/favorites" },
+    { icon: Bookmark, label: "Saved Searches", href: "/saved" },
+    { icon: MessageSquare, label: "Messages", href: "/messages", badge: 3 },
+    { icon: Star, label: "Reviews", href: "/reviews" },
+    { icon: DollarSign, label: "Payments", href: "/payments" },
+    { icon: Users, label: "Refer & Earn", href: "/refer" },
   ];
-  const TENANT_ACTIONS = [
-    { icon: Search, label: "Find a Home", sub: "Browse properties", href: "/properties", color: "emerald" },
-    { icon: Heart, label: "Saved", sub: "Your shortlist", href: "/favorites", color: "rose" },
-    { icon: MessageSquare, label: "Messages", sub: "Talk to owners", href: "/messages", color: "violet" },
-    { icon: MapPin, label: "Cities", sub: "Explore locations", href: "/properties", color: "amber" },
-  ];
-  const actions = isOwner ? OWNER_ACTIONS : TENANT_ACTIONS;
-
-  const ACTION_COLORS: Record<string, { icon: string; ring: string; text: string }> = {
-    emerald: { icon: "bg-emerald-100 text-emerald-600", ring: "ring-emerald-200", text: "text-emerald-600" },
-    blue: { icon: "bg-blue-100 text-blue-600", ring: "ring-blue-200", text: "text-blue-600" },
-    violet: { icon: "bg-violet-100 text-violet-600", ring: "ring-violet-200", text: "text-violet-600" },
-    amber: { icon: "bg-amber-100 text-amber-600", ring: "ring-amber-200", text: "text-amber-600" },
-    rose: { icon: "bg-rose-100 text-rose-600", ring: "ring-rose-200", text: "text-rose-600" },
-  };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-slate-50">
-
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <motion.div whileHover={{ rotate: -8, scale: 1.1 }} transition={{ type: "spring", stiffness: 400 }}
-              className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center shadow-md shadow-emerald-600/30">
-              <Building2 className="w-4 h-4 text-white" />
-            </motion.div>
-            <span className="font-bold text-slate-900 text-lg">StayHub</span>
+    <div className="flex min-h-screen bg-[#090e0c]">
+      {/* ── Sidebar ── */}
+      <aside className="w-64 border-r border-white/5 bg-[#090e0c] hidden lg:flex flex-col sticky top-0 h-screen overflow-y-auto">
+        <div className="p-6">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg border border-emerald-500/20 bg-emerald-500/10 flex items-center justify-center">
+              <Building2 className="w-4 h-4 text-emerald-400" />
+            </div>
+            <span className="font-bold text-white text-xl tracking-tight">Stay<span className="text-emerald-400">Hub</span></span>
           </Link>
-
-          {/* Nav links */}
-          <nav className="hidden md:flex items-center gap-1 flex-1 max-w-sm">
-            {(isOwner
-              ? [["Dashboard", "/dashboard"], ["My Listings", "/my-ads"], ["Analytics", "/analytics"]]
-              : [["Browse", "/properties"], ["Saved", "/favorites"], ["Messages", "/messages"]]
-            ).map(([label, href]) => (
-              <Link key={label} href={href}
-                className="px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-              >{label}</Link>
-            ))}
-          </nav>
-
-          {/* Right side */}
-          <div className="flex items-center gap-2 shrink-0">
-            <Link href="/notifications"
-              className="relative w-9 h-9 rounded-lg hover:bg-slate-100 flex items-center justify-center transition-colors"
-            >
-              <Bell className="w-4.5 h-4.5 text-slate-500" />
-            </Link>
-
-            {/* Avatar menu */}
-            <div className="relative">
-              <motion.button whileTap={{ scale: 0.95 }}
-                onClick={() => setShowMenu(!showMenu)}
-                className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-xl hover:bg-slate-100 transition-colors"
-              >
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-sm">
-                  <span className="text-xs font-bold text-white">{initials}</span>
-                </div>
-                <div className="hidden sm:block text-left">
-                  <p className="text-xs font-semibold text-slate-900 leading-tight">{firstName}</p>
-                  <p className="text-xs text-slate-400 leading-tight capitalize">{user.role?.toLowerCase()}</p>
-                </div>
-                <motion.span animate={{ rotate: showMenu ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                </motion.span>
-              </motion.button>
-
-              <AnimatePresence>
-                {showMenu && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: -8 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 z-50 text-sm origin-top-right"
-                    >
-                      <div className="px-4 py-3 border-b border-slate-100">
-                        <p className="font-semibold text-slate-900 truncate">{user.email}</p>
-                        <p className="text-xs text-slate-400 mt-0.5 capitalize">{isOwner ? "Property Owner" : "Tenant"}</p>
-                      </div>
-                      <div className="py-1">
-                        <Link href="/profile" onClick={() => setShowMenu(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-slate-700 hover:bg-slate-50 transition-colors"><Home className="w-3.5 h-3.5 text-slate-400" />Profile</Link>
-                        <Link href="/dashboard" onClick={() => setShowMenu(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-slate-700 hover:bg-slate-50 transition-colors"><BarChart2 className="w-3.5 h-3.5 text-slate-400" />Dashboard</Link>
-                        <Link href="/messages" onClick={() => setShowMenu(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-slate-700 hover:bg-slate-50 transition-colors"><MessageSquare className="w-3.5 h-3.5 text-slate-400" />Messages</Link>
-                      </div>
-                      <div className="border-t border-slate-100 pt-1">
-                        <button onClick={onSignOut} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-red-600 hover:bg-red-50 transition-colors">
-                          <LogOut className="w-3.5 h-3.5" /> Sign Out
-                        </button>
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
         </div>
-      </header>
-
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-28 space-y-10">
-
-        {/* ── Welcome banner ─────────────────────────────────────────── */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 p-8 sm:p-12"
-        >
-          {/* Background decoration */}
-          <div className="absolute -right-20 -top-20 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-10 -bottom-10 w-48 h-48 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "20px 20px" }} />
-
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-8">
-            <div className="flex-1">
-              <p className="text-sm text-emerald-300 font-semibold mb-2 uppercase tracking-wide">Welcome back,</p>
-              <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 capitalize leading-tight">{firstName} 👋</h1>
-              <p className="text-slate-300 text-base max-w-md leading-relaxed">
-                {isOwner
-                  ? "Manage your listings, track leads, and grow your rental business with real-time insights."
-                  : "Discover verified rentals across India — zero brokerage, direct from owners. Your next home awaits."}
-              </p>
-              <p className="mt-4 inline-flex max-w-lg items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-slate-200 backdrop-blur-sm">
-                <MapPin className="h-4 w-4 text-emerald-300 shrink-0" />
-                <span className="truncate">📍 {currentLocationLabel || "Detecting location..."}</span>
-              </p>
-            </div>
-            <div className="flex flex-col gap-3 shrink-0">
-              <Link href={isOwner ? "/my-ads" : "/properties"}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-sm font-semibold rounded-xl transition-all shadow-lg shadow-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/40"
-              >
-                {isOwner ? <Plus className="w-5 h-5" /> : <Search className="w-5 h-5" />}
-                {isOwner ? "Add Property" : "Browse Properties"}
-              </Link>
-              <Link href="/dashboard"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/15 text-white text-sm font-semibold rounded-xl transition-all border border-white/20 backdrop-blur-sm"
-              >
-                <BarChart2 className="w-4 h-4" />
-                Dashboard
-              </Link>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ── Quick actions ──────────────────────────────────────────── */}
-        <motion.div variants={staggerFast} initial="hidden" animate="show"
-          className="grid grid-cols-2 sm:grid-cols-4 gap-3"
-        >
-          {actions.map((a) => {
-            const c = ACTION_COLORS[a.color] ?? ACTION_COLORS.emerald;
-            return (
-              <motion.div key={a.label} variants={fadeUp}>
-                <Link href={a.href}
-                  className="group flex items-center gap-3 bg-white rounded-2xl p-4 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all duration-200"
-                >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ring-4 ${c.icon} ${c.ring}`}>
-                    <a.icon className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className={`text-sm font-semibold ${c.text} truncate`}>{a.label}</p>
-                    <p className="text-xs text-slate-400 truncate">{a.sub}</p>
-                  </div>
-                </Link>
-              </motion.div>
-            );
-          })}
-        </motion.div>
-
-        {/* ── Enhanced Search Bar ────────────────────────────────────── */}
-        <HeroSearchBar />
-
-        {/* ── Properties section ─────────────────────────────────────── */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">Featured Properties</h2>
-              <p className="text-sm text-slate-500 mt-1">Verified listings across India — Zero brokerage</p>
-            </div>
-            <Link href="/properties"
-              className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 flex items-center gap-2 group"
-            >
-              View All <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+        
+        <nav className="flex-1 px-4 py-2 space-y-1.5">
+          {SIDEBAR_ITEMS.map((item, i) => (
+            <Link key={i} href={item.href} className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 ${item.active ? "bg-white/5 text-white" : "text-white/50 hover:text-white hover:bg-white/5"}`}>
+              <div className="flex items-center gap-3">
+                <item.icon className={`w-4.5 h-4.5 ${item.active ? "text-emerald-400" : ""}`} />
+                <span className="text-sm font-medium">{item.label}</span>
+              </div>
+              {item.badge && (
+                <span className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] font-bold text-white">
+                  {item.badge}
+                </span>
+              )}
             </Link>
-          </div>
-
-          {/* Error banner */}
-          {isError && (
-            <div className="mb-5 bg-red-50 border border-red-100 rounded-2xl p-4 text-sm text-red-600 text-center">
-              Couldn&apos;t load properties.{" "}
-              <Link href="/properties" className="underline font-semibold">
-                Browse all properties →
+          ))}
+          {isOwner && (
+            <div className="pt-4 mt-4 border-t border-white/5">
+              <Link href="/dashboard" className="flex items-center justify-between px-3 py-2.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-colors">
+                <div className="flex items-center gap-3">
+                  <BarChart2 className="w-4.5 h-4.5" />
+                  <span className="text-sm font-medium">Host Dashboard</span>
+                </div>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/20">New</span>
               </Link>
             </div>
           )}
+        </nav>
 
-          {/* Type filter pills */}
-          <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1 scrollbar-hide">
-            {TYPE_FILTERS.map((t) => (
-              <motion.button key={t} whileTap={{ scale: 0.95 }}
-                onClick={() => setActiveType(t)}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${activeType === t
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
-                  : "bg-white text-slate-600 border border-slate-200 hover:border-emerald-300 hover:text-emerald-700"
-                  }`}
-              >
-                {t === "ALL" ? "All Types" : t}
-              </motion.button>
-            ))}
-          </div>
-
-          {/* Cards grid */}
-          {isLoading ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-white rounded-2xl overflow-hidden border border-slate-200 animate-pulse">
-                  <div className="h-44 bg-slate-200" />
-                  <div className="p-4 space-y-3">
-                    <div className="h-4 bg-slate-100 rounded-full w-3/4" />
-                    <div className="h-3 bg-slate-100 rounded-full w-1/2" />
-                    <div className="h-3 bg-slate-100 rounded-full w-1/3" />
-                  </div>
-                </div>
-              ))}
+        {/* List Property Ad */}
+        <div className="p-5 mt-auto">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 p-5">
+            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=400&q=80')] opacity-20 mix-blend-overlay object-cover" />
+            <div className="relative z-10">
+              <h4 className="text-white font-bold text-sm mb-1">List your property</h4>
+              <p className="text-white/50 text-xs mb-4 leading-relaxed">Earn more by listing your space on StayHub.</p>
+              <Link href="/my-ads" className="inline-flex items-center gap-2 text-xs font-semibold text-white px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors border border-white/5 w-full justify-center">
+                Become a Host <ArrowRight className="w-3 h-3" />
+              </Link>
             </div>
-          ) : filtered.length > 0 ? (
-            <motion.div variants={stagger} initial="hidden" animate="show"
-              className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"
-            >
-              {filtered.map((p) => (
-                <motion.div key={p.id} variants={fadeUp}>
-                  <PropertyCard p={p} />
-                </motion.div>
-              ))}
-            </motion.div>
-          ) : (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="bg-white rounded-3xl p-16 text-center border-2 border-dashed border-slate-200"
-            >
-              <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Building2 className="w-8 h-8 text-slate-300" />
-              </div>
-              <p className="font-semibold text-slate-700 mb-1">
-                {activeType === "ALL" ? "No properties yet" : `No ${activeType} listings found`}
-              </p>
-              <p className="text-sm text-slate-400 mb-6">Check back soon or explore all property types</p>
-              <div className="flex items-center justify-center gap-3">
-                {activeType !== "ALL" && (
-                  <button onClick={() => setActiveType("ALL")}
-                    className="px-4 py-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
-                  >Clear filter</button>
-                )}
-                <Link href="/properties"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 transition-colors"
-                >
-                  <Search className="w-4 h-4" /> Browse All
-                </Link>
-              </div>
-            </motion.div>
-          )}
-        </section>
-
-        {/* ── Categories quick-browse ────────────────────────────────── */}
-        <section className="pb-4">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">Browse by Category</h2>
-              <p className="text-sm text-slate-500 mt-1">Find exactly what you&apos;re looking for</p>
-            </div>
-          </div>
-          <motion.div variants={staggerFast} initial="hidden" animate="show"
-            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4"
-          >
-            {CATEGORIES.map((cat) => {
-              const c = CAT_COLORS[cat.color];
-              return (
-                <motion.div key={cat.type} variants={fadeUp}>
-                  <Link href={`/properties?property_type=${cat.type}`}
-                    className={`group flex flex-col items-center gap-3 p-5 bg-white rounded-2xl border border-slate-200 ${c.border} ${c.bg} ${c.glow} hover:shadow-lg hover:-translate-y-1 transition-all duration-200 block`}
-                  >
-                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-3xl ${c.icon} group-hover:scale-110 transition-transform`}>{cat.emoji}</div>
-                    <span className={`text-sm font-semibold text-slate-900 text-center leading-tight ${c.text} transition-colors`}>{cat.label}</span>
-                    <span className="text-xs text-slate-400 hidden sm:block text-center">{cat.sub}</span>
-                  </Link>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        </section>
-
-      </div>
-
-      {/* ── Footer ──────────────────────────────────────────────────────── */}
-      <footer className="border-t border-slate-200 bg-white mt-4">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-emerald-600 rounded-lg flex items-center justify-center">
-              <Building2 className="w-3.5 h-3.5 text-white" />
-            </div>
-            <span className="text-sm font-bold text-slate-900">StayHub</span>
-          </div>
-          <p className="text-xs text-slate-400">© {new Date().getFullYear()} StayHub Technologies. India&apos;s zero-brokerage rental platform.</p>
-          <div className="flex items-center gap-4 text-xs text-slate-400">
-            <Link href="/privacy" className="hover:text-emerald-600 transition-colors">Privacy</Link>
-            <Link href="/terms" className="hover:text-emerald-600 transition-colors">Terms</Link>
-            <Link href="/contact" className="hover:text-emerald-600 transition-colors">Contact</Link>
           </div>
         </div>
-      </footer>
+      </aside>
 
-    </motion.div>
+      {/* ── Main Content ── */}
+      <main className="flex-1 flex flex-col min-h-screen relative overflow-hidden">
+        {/* Topbar */}
+        <header className="h-20 border-b border-white/5 flex items-center justify-between px-6 lg:px-10 sticky top-0 z-40 bg-[#090e0c]/80 backdrop-blur-xl">
+          {/* Mobile menu button & logo */}
+          <div className="flex items-center gap-4 lg:hidden">
+            <button className="text-white/70 hover:text-white p-2 -ml-2 rounded-xl hover:bg-white/5 transition-colors">
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+              <Building2 className="w-4 h-4 text-emerald-400" />
+            </div>
+          </div>
+
+          <div className="hidden lg:block w-full max-w-md relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+            <input 
+              placeholder="Search by location, property or category" 
+              className="w-full bg-[#15191C] border border-white/5 rounded-xl py-2.5 pl-11 pr-12 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500/50 transition-colors"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-white/30 font-mono border border-white/10 rounded px-1.5 py-0.5 bg-white/5">⌘K</span>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-6 ml-auto">
+            <Link href="/favorites" className="hidden sm:flex flex-col items-center gap-1 group">
+              <Heart className="w-5 h-5 text-white/50 group-hover:text-white transition-colors" />
+              <span className="text-[10px] font-medium text-white/50 group-hover:text-white">Wishlist</span>
+            </Link>
+            <Link href="/messages" className="hidden sm:flex flex-col items-center gap-1 group relative">
+              <div className="relative">
+                <MessageSquare className="w-5 h-5 text-white/50 group-hover:text-white transition-colors" />
+                <span className="absolute -top-1 -right-2 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-[#090e0c] flex items-center justify-center text-[8px] font-bold text-white">3</span>
+              </div>
+              <span className="text-[10px] font-medium text-white/50 group-hover:text-white mt-1">Messages</span>
+            </Link>
+            <Link href="/notifications" className="hidden sm:flex flex-col items-center gap-1 group relative">
+              <div className="relative">
+                <Bell className="w-5 h-5 text-white/50 group-hover:text-white transition-colors" />
+                <span className="absolute -top-1 -right-2 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-[#090e0c] flex items-center justify-center text-[8px] font-bold text-white">6</span>
+              </div>
+              <span className="text-[10px] font-medium text-white/50 group-hover:text-white mt-1">Notifications</span>
+            </Link>
+            
+            {/* Divider */}
+            <div className="hidden sm:block w-px h-8 bg-white/10 mx-2" />
+
+            {/* Profile Dropdown Trigger */}
+            <div className="flex items-center gap-3 cursor-pointer group p-1.5 rounded-xl hover:bg-white/5 transition-colors" onClick={onSignOut}>
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center overflow-hidden border border-white/10">
+                <span className="text-sm font-bold text-white">
+                  {user.first_name?.[0]?.toUpperCase() ?? user.email?.[0]?.toUpperCase()}
+                </span>
+              </div>
+              <div className="hidden sm:block text-left">
+                <p className="text-sm font-semibold text-white leading-tight group-hover:text-emerald-400 transition-colors">{firstName}</p>
+                <p className="text-[10px] text-white/50 leading-tight">View profile</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="p-6 lg:p-10 pb-32 max-w-7xl mx-auto w-full space-y-12">
+          
+          {/* ── Hero Section ── */}
+          <section className="relative z-10">
+            <p className="text-emerald-400 text-sm font-semibold mb-3 flex items-center gap-2">
+              Welcome back, {firstName} <span className="text-lg">👋</span>
+            </p>
+            <h1 className="text-4xl md:text-5xl lg:text-[56px] font-bold text-white mb-4 tracking-tight leading-[1.1]">
+              Find your perfect <br className="hidden sm:block" />stay, <span className="text-emerald-400">your way</span>
+            </h1>
+            <p className="text-white/50 mb-10 max-w-md text-base leading-relaxed">
+              Explore handpicked properties that match your lifestyle and comfort.
+            </p>
+
+            {/* Advanced Search Bar matching image */}
+            <div className="bg-[#15191C] border border-white/5 rounded-[2rem] sm:rounded-full flex flex-col sm:flex-row items-center p-2 sm:divide-x divide-white/10 shadow-2xl shadow-black/50">
+              <div className="px-6 py-4 flex-1 w-full hover:bg-white/5 sm:rounded-l-full cursor-pointer transition-colors group">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-white/50 font-medium group-hover:text-white/70 transition-colors">Where</p>
+                    <p className="text-sm text-white font-medium truncate mt-0.5">Search location</p>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-white/30" />
+                </div>
+              </div>
+              
+              <div className="hidden md:flex px-6 py-4 flex-1 w-full hover:bg-white/5 cursor-pointer transition-colors group items-center justify-between">
+                <div>
+                  <p className="text-xs text-white/50 font-medium group-hover:text-white/70 transition-colors">Check in</p>
+                  <p className="text-sm text-white font-medium truncate mt-0.5">Select date</p>
+                </div>
+              </div>
+
+              <div className="hidden md:flex px-6 py-4 flex-1 w-full hover:bg-white/5 cursor-pointer transition-colors group items-center justify-between">
+                <div>
+                  <p className="text-xs text-white/50 font-medium group-hover:text-white/70 transition-colors">Check out</p>
+                  <p className="text-sm text-white font-medium truncate mt-0.5">Select date</p>
+                </div>
+              </div>
+
+              <div className="px-6 py-4 flex-1 w-full hover:bg-white/5 cursor-pointer transition-colors group">
+                 <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-white/50 font-medium group-hover:text-white/70 transition-colors">Guests</p>
+                    <p className="text-sm text-white font-medium truncate mt-0.5">Add guests</p>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-white/30" />
+                </div>
+              </div>
+
+              <div className="p-2 shrink-0 w-full sm:w-auto">
+                <button className="bg-emerald-500 hover:bg-emerald-400 text-white w-full sm:w-auto rounded-full px-8 py-4 sm:py-3.5 text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                  <Search className="w-4 h-4" /> Search
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* ── Featured Properties Grid ── */}
+          <section>
+            <div className="flex items-end justify-between mb-8">
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-1.5">Featured for you</h2>
+                <p className="text-white/40 text-sm">Handpicked properties based on your preferences</p>
+              </div>
+              <Link href="/properties" className="hidden sm:flex text-white/60 hover:text-white text-sm items-center gap-1 transition-colors group">
+                View all <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                {[1,2,3,4].map(i => (
+                  <div key={i} className="bg-[#15191C] border border-white/5 rounded-3xl h-[400px] animate-pulse" />
+                ))}
+              </div>
+            ) : isError ? (
+              <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-2xl text-red-400 text-sm text-center">
+                Failed to load featured properties.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                {(properties || []).slice(0, 4).map((p, i) => (
+                  <PremiumPropertyCard p={p} index={i} key={p.id} />
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      </main>
+    </div>
   );
 }
 
+function PremiumPropertyCard({ p, index }: { p: PropertyListItem; index: number }) {
+  const rent = Number(p.rent);
+  
+  // Real stats from the backend instead of dummy data
+  const views = p.total_views || 0;
+  const favorites = p.total_favorites || 0;
+  const contacts = p.total_contacts || 0;
+  
+  // Create a nice gradient placeholder since backend doesn't return `images` yet
+  const TYPE_GRADIENTS: Record<string, string> = {
+    PG: "from-blue-500 to-indigo-600",
+    "1RK": "from-violet-500 to-purple-600",
+    "1BHK": "from-rose-500 to-pink-600",
+    "2BHK": "from-emerald-500 to-teal-600",
+    "3BHK": "from-amber-500 to-orange-600",
+    HOUSE: "from-cyan-500 to-blue-600",
+    COMMERCIAL: "from-slate-500 to-slate-700",
+  };
+  const grad = TYPE_GRADIENTS[p.property_type] ?? "from-slate-600 to-slate-800";
+
+  return (
+    <Link href={`/properties/${p.id}`} className="group block">
+      <div className="bg-[#15191C] rounded-2xl overflow-hidden border border-white/5 hover:border-emerald-500/30 transition-all duration-300 hover:shadow-2xl hover:shadow-emerald-500/10 h-full flex flex-col">
+        
+        {/* Image / Gradient Half */}
+        <div className={`relative h-48 w-full overflow-hidden shrink-0 bg-gradient-to-br ${grad}`}>
+          <div className="absolute inset-0 flex items-center justify-center opacity-20 transition-transform duration-700 group-hover:scale-110">
+             <Building2 className="w-16 h-16 text-white" />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#15191C] via-transparent to-transparent opacity-80" />
+          
+          {p.is_featured && (
+            <div className="absolute top-4 left-4">
+              <span className="px-2.5 py-1 rounded-md text-[10px] font-bold text-white shadow-lg uppercase tracking-wide bg-amber-500">
+                Featured
+              </span>
+            </div>
+          )}
+
+          <button onClick={(e) => e.preventDefault()} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white hover:bg-emerald-500/80 transition-colors border border-white/10 shadow-lg">
+            <Heart className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Content Half */}
+        <div className="p-5 flex-1 flex flex-col">
+          <h3 className="font-bold text-white text-[15px] line-clamp-1 group-hover:text-emerald-400 transition-colors mb-1.5">
+            {p.title}
+          </h3>
+          <p className="text-white/40 text-xs flex items-center gap-1.5 mb-4">
+            <MapPin className="w-3.5 h-3.5" />
+            <span className="truncate">{p.locality}, {p.city}</span>
+          </p>
+
+          <div className="mb-4 flex items-center gap-2">
+            <span className="text-lg font-bold text-emerald-400">₹{rent.toLocaleString("en-IN")}</span>
+            <span className="text-white/40 text-[11px] font-medium uppercase tracking-wider">/ month</span>
+          </div>
+
+          <div className="flex items-center gap-3 text-white/50 text-[11px] mb-4 mt-auto font-medium">
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-white/5 rounded-md text-emerald-400/80"><Building2 className="w-3 h-3" /> {p.property_type}</div>
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-white/5 rounded-md text-emerald-400/80"><Home className="w-3 h-3" /> {p.furnishing}</div>
+          </div>
+
+          <div className="pt-4 border-t border-white/5 flex items-center justify-between text-white/30 text-xs font-medium">
+             <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {views}</span>
+             <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> {favorites}</span>
+             <span className="flex items-center gap-1"><MessageSquare className="w-3.5 h-3.5" /> {contacts}</span>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
 // ─── Scroll-aware Navbar ─────────────────────────────────────────────────────
 
 function Navbar({ onOpenAuth }: { onOpenAuth: (role: "TENANT" | "OWNER") => void }) {

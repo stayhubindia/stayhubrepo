@@ -59,7 +59,7 @@ export default function AuthModal({ isOpen, onClose, initialRole = "TENANT", red
 
   const getPostAuthPath = (role: "TENANT" | "OWNER", user: { phone?: string | null }) => {
     if (role === "OWNER" && !user.phone) return "/owner-onboarding";
-    return redirectTo ?? "/dashboard";
+    return redirectTo ?? "/";
   };
 
   const requestForm = useForm<RequestEmailOtpInput>({
