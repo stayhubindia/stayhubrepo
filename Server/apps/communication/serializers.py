@@ -16,6 +16,8 @@ class ConversationCreateSerializer(serializers.Serializer):
 class MessageSendSerializer(serializers.Serializer):
     content = serializers.CharField(required=False, allow_blank=True)
     image = serializers.ImageField(required=False, allow_null=True)
+    audio = serializers.FileField(required=False, allow_null=True)
+    client_id = serializers.UUIDField(required=False, allow_null=True)
 
 
 class MessageSerializer(serializers.ModelSerializer):
@@ -30,8 +32,10 @@ class MessageSerializer(serializers.ModelSerializer):
             "message_type",
             "content",
             "image",
+            "audio",
             "is_read",
             "read_at",
+            "client_id",
             "created_at",
         ]
         read_only_fields = fields

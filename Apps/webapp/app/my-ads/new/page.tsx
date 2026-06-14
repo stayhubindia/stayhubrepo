@@ -7,6 +7,9 @@ import {
   ArrowLeft,
   Bath,
   Bed,
+  Calendar as CalendarIcon,
+  Camera,
+  CheckCircle,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -16,8 +19,10 @@ import {
   LoaderCircle,
   MapPin,
   Megaphone,
+  RefreshCcw,
   ShieldCheck,
   SquareStack,
+  X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -25,7 +30,7 @@ import { useIdempotentAction } from "@/hooks/use-idempotent-action";
 import { useRequireAuth } from "@/hooks/use-route-guard";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { getMissingOwnerProfileFields } from "@/lib/profile-completion";
-import { useCreateProperty, useSubmitProperty } from "@/modules/properties/hooks";
+import { useCreateProperty, useSubmitProperty, useUploadPropertyImage, useAmenities } from "@/modules/properties/hooks";
 
 type PropertyType = "PG" | "1RK" | "1BHK" | "2BHK" | "3BHK" | "HOUSE" | "COMMERCIAL";
 type Furnishing = "FURNISHED" | "SEMI" | "UNFURNISHED";
@@ -59,7 +64,8 @@ const STEPS = [
   { id: 1, label: "Property", icon: Home, desc: "Type, title & description" },
   { id: 2, label: "Location", icon: MapPin, desc: "City & locality" },
   { id: 3, label: "Pricing", icon: IndianRupee, desc: "Rent, specs & preferences" },
-  { id: 4, label: "Review", icon: CheckCircle2, desc: "Confirm & publish" },
+  { id: 4, label: "Images", icon: Camera, desc: "Upload photos" },
+  { id: 5, label: "Review", icon: CheckCircle2, desc: "Confirm & publish" },
 ];
 
 export default function MyAdsNewPage() {
@@ -74,6 +80,11 @@ export default function MyAdsNewPage() {
     description: "",
     city: "",
     locality: "",
+    address: "",
+    state: "",
+    pincode: "",
+    lat: null as number | null,
+    lng: null as number | null,
     rent: "",
     deposit: "",
     furnishing: "" as Furnishing | "",
@@ -81,11 +92,51 @@ export default function MyAdsNewPage() {
     bathrooms: "",
     area_sqft: "",
     preferred_tenant: "ANY" as PreferredTenant,
+    available_from: "",
+    amenity_ids: [] as number[],
+    images: [] as File[],
   });
 
   const createMutation = useCreateProperty();
   const submitMutation = useSubmitProperty();
+  const uploadMutation = useUploadPropertyImage();
+  const { data: availableAmenities } = useAmenities();
   const { runOnce, isInFlight } = useIdempotentAction();
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+
+  const getCurrentLocation = () => {
+    setIsFetchingLocation(true);
+    if (!navigator.geolocation) {
+      setError("Geolocation not supported by this browser.");
+      setIsFetchingLocation(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`);
+          const data = await res.json();
+          setForm((prev) => ({
+            ...prev,
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            city: data.address?.city || data.address?.town || data.address?.village || prev.city,
+            state: data.address?.state || prev.state,
+            pincode: data.address?.postcode || prev.pincode,
+            locality: data.address?.suburb || data.address?.neighbourhood || prev.locality,
+            address: data.display_name || prev.address,
+          }));
+        } catch(e) {
+          setForm((prev) => ({ ...prev, lat: position.coords.latitude, lng: position.coords.longitude }));
+        }
+        setIsFetchingLocation(false);
+      },
+      () => {
+        setError("Unable to get location. Please enable location services.");
+        setIsFetchingLocation(false);
+      }
+    );
+  };
 
   const reviewRows = useMemo(
     () => [
@@ -145,15 +196,15 @@ export default function MyAdsNewPage() {
     );
   }
 
-  const progress = (step / 4) * 100;
-  const isBusy = createMutation.isPending || submitMutation.isPending || isInFlight("my-ad:create-submit");
+  const progress = (step / 5) * 100;
+  const isBusy = createMutation.isPending || submitMutation.isPending || uploadMutation.isPending || isInFlight("my-ad:create-submit");
 
   const nextDisabled =
     (step === 1 && (!form.property_type || !form.title || !form.description)) ||
-    (step === 2 && !form.city) ||
+    (step === 2 && (!form.city || form.lat === null || form.lng === null)) ||
     (step === 3 && (!form.rent || !form.furnishing));
 
-  const handleNext = () => setStep((s) => Math.min(s + 1, 4));
+  const handleNext = () => setStep((s) => Math.min(s + 1, 5));
   const handleBack = () => setStep((s) => Math.max(s - 1, 1));
 
   const handleSubmit = async () => {
@@ -170,11 +221,30 @@ export default function MyAdsNewPage() {
           bedrooms: form.bedrooms ? Number(form.bedrooms) : undefined,
           bathrooms: form.bathrooms ? Number(form.bathrooms) : undefined,
           area_sqft: form.area_sqft ? Number(form.area_sqft) : undefined,
+          address: form.address || undefined,
           city: form.city,
+          state: form.state || undefined,
+          pincode: form.pincode || undefined,
           locality: form.locality || undefined,
+          lat: form.lat,
+          lng: form.lng,
           preferred_tenant: form.preferred_tenant,
+          available_from: form.available_from || undefined,
+          amenity_ids: form.amenity_ids,
         };
         const property = await createMutation.mutateAsync(payload);
+        
+        if (form.images.length > 0) {
+          for (let i = 0; i < form.images.length; i++) {
+            await uploadMutation.mutateAsync({
+              id: property.id,
+              file: form.images[i],
+              isPrimary: i === 0,
+              order: i,
+            });
+          }
+        }
+        
         await submitMutation.mutateAsync(property.id);
         router.push("/my-ads");
       } catch (err) {
@@ -197,7 +267,7 @@ export default function MyAdsNewPage() {
           <div className="flex-1">
             <p className="text-xs font-semibold uppercase tracking-widest text-indigo-600">Post an Ad</p>
             <p className="text-sm font-bold text-slate-900 leading-tight">
-              Step {step} of 4 — {STEPS[step - 1].label}
+              Step {step} of 5 — {STEPS[step - 1].label}
             </p>
           </div>
           {/* progress bar */}
@@ -383,22 +453,50 @@ export default function MyAdsNewPage() {
                   <p className="mt-1 text-sm text-slate-500">A precise location helps tenants find your listing in their search.</p>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-700">
-                      City <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <MapPin className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type="text"
-                        value={form.city}
-                        onChange={(e) => setForm({ ...form, city: e.target.value })}
-                        placeholder="e.g. Delhi, Mumbai"
-                        className="w-full rounded-2xl border border-slate-300 py-3 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                      />
+                <div className={`p-4 rounded-xl border ${form.lat !== null ? 'bg-emerald-50 border-emerald-200' : 'bg-indigo-50 border-indigo-200'}`}>
+                  <div className="flex items-start gap-3">
+                    <MapPin className={`w-5 h-5 mt-0.5 ${form.lat !== null ? 'text-emerald-600' : 'text-indigo-600'}`} />
+                    <div className="flex-1">
+                      <h3 className={`font-semibold ${form.lat !== null ? 'text-emerald-900' : 'text-indigo-900'}`}>
+                        {form.lat !== null ? 'GPS Location Acquired' : 'Mandatory GPS Location'}
+                      </h3>
+                      <p className={`mt-1 text-sm ${form.lat !== null ? 'text-emerald-700' : 'text-indigo-700'}`}>
+                        {form.lat !== null 
+                          ? `Coordinates: ${form.lat.toFixed(6)}, ${form.lng?.toFixed(6)}`
+                          : 'We need your precise location to show the property accurately on the map. This will also auto-fill your address below.'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={getCurrentLocation}
+                        disabled={isFetchingLocation}
+                        className={`mt-3 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                          form.lat !== null 
+                            ? 'bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                            : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                        }`}
+                      >
+                        {isFetchingLocation ? <LoaderCircle className="w-4 h-4 animate-spin" /> : <RefreshCcw className="w-4 h-4" />}
+                        {form.lat !== null ? 'Update Location' : 'Fetch Current Location'}
+                      </button>
                     </div>
                   </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">Street address <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <MapPin className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={form.address}
+                      onChange={(e) => setForm({ ...form, address: e.target.value })}
+                      placeholder="Full street address"
+                      className="w-full rounded-2xl border border-slate-300 py-3 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="mb-2 block text-sm font-medium text-slate-700">Locality / Area</label>
                     <input
@@ -409,10 +507,37 @@ export default function MyAdsNewPage() {
                       className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
                     />
                   </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-slate-700">City <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      value={form.city}
+                      onChange={(e) => setForm({ ...form, city: e.target.value })}
+                      placeholder="e.g. Delhi, Mumbai"
+                      className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
                 </div>
 
-                <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3.5 text-sm leading-6 text-indigo-800">
-                  <strong className="font-semibold">Tip:</strong> Adding a specific locality (like a neighbourhood or sector) significantly improves your listing&apos;s visibility in local searches.
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-slate-700">State</label>
+                    <input
+                      type="text"
+                      value={form.state}
+                      onChange={(e) => setForm({ ...form, state: e.target.value })}
+                      className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-slate-700">Pincode</label>
+                    <input
+                      type="text"
+                      value={form.pincode}
+                      onChange={(e) => setForm({ ...form, pincode: e.target.value })}
+                      className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -553,14 +678,122 @@ export default function MyAdsNewPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Available From */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">Available from</label>
+                  <div className="relative">
+                    <CalendarIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="date"
+                      value={form.available_from}
+                      onChange={(e) => setForm({ ...form, available_from: e.target.value })}
+                      className="w-full rounded-2xl border border-slate-300 py-3 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
+                </div>
+
+                {/* Amenities */}
+                {availableAmenities && availableAmenities.length > 0 && (
+                  <div>
+                    <label className="mb-3 block text-sm font-medium text-slate-700">Amenities</label>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {availableAmenities.map((amenity) => (
+                        <button
+                          key={amenity.id}
+                          type="button"
+                          onClick={() => {
+                            setForm((prev) => ({
+                              ...prev,
+                              amenity_ids: prev.amenity_ids.includes(amenity.id)
+                                ? prev.amenity_ids.filter((id) => id !== amenity.id)
+                                : [...prev.amenity_ids, amenity.id],
+                            }));
+                          }}
+                          className={`flex items-center justify-between rounded-xl border p-3 text-left transition-all ${
+                            form.amenity_ids.includes(amenity.id)
+                              ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                              : "border-slate-200 bg-white text-slate-700 hover:border-indigo-200"
+                          }`}
+                        >
+                          <span className="text-sm font-medium">{amenity.name}</span>
+                          {form.amenity_ids.includes(amenity.id) && <CheckCircle className="h-4 w-4 text-indigo-600" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* ─ Step 4: Review ─ */}
+            {/* ─ Step 4: Images ─ */}
             {step === 4 && (
               <div className="space-y-6">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-widest text-indigo-600">Step 4</p>
+                  <h2 className="mt-1 text-xl font-bold text-slate-900">Upload property photos</h2>
+                  <p className="mt-1 text-sm text-slate-500">Listings with high-quality photos get more leads.</p>
+                </div>
+
+                <div className="mt-4">
+                  <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-indigo-200 rounded-2xl bg-indigo-50/50 hover:bg-indigo-50 cursor-pointer transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Camera className="w-8 h-8 mb-3 text-indigo-400" />
+                      <p className="mb-2 text-sm text-slate-600"><span className="font-bold text-indigo-600">Click to upload</span> or drag and drop</p>
+                      <p className="text-xs text-slate-500">PNG, JPG or WEBP (Max. 5MB)</p>
+                    </div>
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      multiple 
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          const newFiles = Array.from(e.target.files);
+                          setForm({ ...form, images: [...form.images, ...newFiles] });
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+
+                {form.images.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+                    {form.images.map((file, index) => (
+                      <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group">
+                        <img 
+                          src={URL.createObjectURL(file)} 
+                          alt={`preview-${index}`} 
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newImages = [...form.images];
+                            newImages.splice(index, 1);
+                            setForm({ ...form, images: newImages });
+                          }}
+                          className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                        {index === 0 && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-indigo-600/80 backdrop-blur-sm text-white text-[10px] font-bold text-center py-1">
+                            COVER
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ─ Step 5: Review ─ */}
+            {step === 5 && (
+              <div className="space-y-6">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-indigo-600">Step 5</p>
                   <h2 className="mt-1 text-xl font-bold text-slate-900">Review before publishing</h2>
                   <p className="mt-1 text-sm text-slate-500">Double-check your ad details. Once submitted it goes for review before going live.</p>
                 </div>
@@ -614,7 +847,7 @@ export default function MyAdsNewPage() {
                 <div />
               )}
 
-              {step < 4 ? (
+              {step < 5 ? (
                 <button
                   type="button"
                   onClick={handleNext}

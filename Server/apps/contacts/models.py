@@ -53,3 +53,55 @@ class ContactLog(BaseModel):
 
     def __str__(self):
         return f"{self.tenant} → {self.property}"
+
+class TourRequest(BaseModel):
+    STATUS_CHOICES = (
+        ("PENDING", "Pending"),
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+        ("COMPLETED", "Completed"),
+        ("CANCELLED", "Cancelled"),
+    )
+
+    property = models.ForeignKey(
+        Property,
+        on_delete=models.CASCADE,
+        related_name="tour_requests",
+        db_index=True
+    )
+
+    tenant = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="tours_requested",
+        db_index=True
+    )
+
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="tours_received",
+        db_index=True
+    )
+
+    tour_date = models.DateField(db_index=True)
+    tour_time = models.CharField(max_length=20)
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="PENDING",
+        db_index=True
+    )
+    
+    message = models.TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["property", "tenant"]),
+            models.Index(fields=["owner", "status"]),
+        ]
+
+    def __str__(self):
+        return f"Tour: {self.tenant} at {self.property} on {self.tour_date}"

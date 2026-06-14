@@ -17,5 +17,5 @@ final favoritesProvider =
 final favoritePropertyIdsProvider =
     FutureProvider.autoDispose<Set<String>>((ref) async {
   final favs = await ref.watch(favoritesProvider.future);
-  return favs.map((f) => f.property.id).toSet();
+  return favs.map((f) => f.propertyId).toSet();
 });

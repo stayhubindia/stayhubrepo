@@ -1,459 +1,615 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import {
-  AlertCircle,
-  ArrowRight,
-  BarChart3,
   Bell,
-  CheckCircle2,
+  Building2,
   ChevronRight,
+  FileText,
   Heart,
-  Home,
+  Key,
+  Lock,
   LogOut,
   Mail,
   MapPin,
+  Menu,
   MessageSquare,
+  Monitor,
   Phone,
-  Settings,
+  Search,
   Shield,
-  Sparkles,
-  Star,
+  ShieldCheck,
+  Trash2,
+  Upload,
   User,
+  X,
 } from "lucide-react";
-import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
 
 import { useRequireAuth } from "@/hooks/use-route-guard";
 import { useAuthStore } from "@/store/auth-store";
+import { DesktopSidebar } from "@/components/layout/desktop-sidebar";
+import { ProfileDropdown } from "@/components/layout/profile-dropdown";
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
+import { useUnreadCount } from "@/hooks/use-unread-count";
+import { useMe, useUpdateMe } from "@/modules/users/hooks";
 
-const formatMonthYear = (date: string) =>
-  new Date(date).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+const formatMemberSince = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+
+const formatActivityDate = (d: Date) =>
+  d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function VerifiedBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 text-emerald-600 text-xs font-semibold">
+      <ShieldCheck className="w-3.5 h-3.5" />
+      Verified
+    </span>
+  );
+}
+
+function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-2xl border border-slate-200 bg-white shadow-sm p-6 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <h2 className="text-base font-bold text-slate-900 mb-4">{children}</h2>;
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function AccountPage() {
   const router = useRouter();
   const { user, isAllowed } = useRequireAuth();
   const { clearSession } = useAuthStore();
+  const { count: unreadCount, isLoading: unreadLoading, isError: unreadError } = useUnreadCount();
+
+  // Personal info editing state
+  const [isEditing, setIsEditing] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Delete account dialog
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const updateMutation = useUpdateMe();
 
   if (!isAllowed || !user) return null;
 
-  const isOwner = user.role === "OWNER";
-  const displayName = [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email?.split("@")[0] || "User";
-  const initials = `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.trim().toUpperCase() || user.email?.[0]?.toUpperCase() || "U";
-  const memberSince = user.date_joined ? formatMonthYear(user.date_joined) : null;
+  const displayName =
+    [user.first_name, user.last_name].filter(Boolean).join(" ") ||
+    user.email?.split("@")[0] ||
+    "User";
+  const initials =
+    `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.trim().toUpperCase() ||
+    user.email?.[0]?.toUpperCase() ||
+    "U";
+  const memberSince = user.date_joined ? formatMemberSince(user.date_joined) : null;
+  const locationStr = [user.location?.city, user.location?.state, user.location?.country]
+    .filter(Boolean)
+    .join(", ");
 
-  const profileFields = [
-    { label: "First name", done: Boolean(user.first_name) },
-    { label: "Last name", done: Boolean(user.last_name) },
-    { label: "Email", done: Boolean(user.email) },
-    { label: "Phone", done: Boolean(user.phone) },
-    { label: "City", done: Boolean(user.location?.city) },
-    { label: "Address", done: Boolean(user.location?.address) },
-    { label: "Pincode", done: Boolean(user.location?.pincode) },
-  ];
+  const handleEditClick = () => {
+    setFirstName(user.first_name ?? "");
+    setLastName(user.last_name ?? "");
+    setEmail(user.email ?? "");
+    setPhone(user.phone ?? "");
+    setSaveError(null);
+    setIsEditing(true);
+  };
 
-  const completedFields = profileFields.filter((item) => item.done).length;
-  const completionPercent = Math.round((completedFields / profileFields.length) * 100);
-  const stepsLeft = profileFields.length - completedFields;
+  const handleCancel = () => {
+    setIsEditing(false);
+    setSaveError(null);
+  };
 
-  const primaryActions = [
-    {
-      href: "/profile",
-      label: "Edit profile",
-      sub: "Update your personal, location, and contact details.",
-      icon: User,
-      tone: "from-emerald-500 to-teal-600",
-    },
-    {
-      href: "/chats",
-      label: "Messages",
-      sub: isOwner ? "Respond to tenant conversations quickly." : "Continue your chats with owners.",
-      icon: MessageSquare,
-      tone: "from-slate-800 to-slate-700",
-    },
-    {
-      href: "/settings",
-      label: "Settings",
-      sub: "Review app preferences, privacy, and notifications.",
-      icon: Settings,
-      tone: "from-amber-400 to-orange-500",
-    },
-  ];
+  const handleSave = async () => {
+    setSaveError(null);
+    try {
+      await updateMutation.mutateAsync({
+        first_name: firstName,
+        last_name: lastName,
+        email: email || null,
+        phone: phone || null,
+      });
+      setIsEditing(false);
+    } catch {
+      setSaveError("Failed to save changes. Please try again.");
+    }
+  };
 
-  const accountMenu: {
-    href?: string;
-    onClick?: () => void;
-    label: string;
-    sub: string;
-    icon: React.ElementType;
-    iconWrap: string;
-    badge?: string;
-    ownerOnly?: boolean;
-    tenantOnly?: boolean;
-    danger?: boolean;
-  }[] = [
-    {
-      href: isOwner ? "/dashboard/properties" : "/dashboard",
-      label: isOwner ? "My listings" : "My dashboard",
-      sub: isOwner ? "Manage your rental inventory and listing quality." : "See your current activity and progress.",
-      icon: Home,
-      iconWrap: "bg-emerald-100 text-emerald-700",
-    },
-    {
-      href: "/favorites",
-      label: "Wishlist",
-      sub: "Properties you have saved for later review.",
-      icon: Heart,
-      iconWrap: "bg-rose-100 text-rose-700",
-      tenantOnly: true,
-    },
-    {
-      href: "/analytics",
-      label: "Analytics",
-      sub: "Track views, favorites, and lead performance.",
-      icon: BarChart3,
-      iconWrap: "bg-sky-100 text-sky-700",
-      ownerOnly: true,
-    },
-    {
-      href: "/notifications",
-      label: "Notifications",
-      sub: "Review recent updates, alerts, and account activity.",
-      icon: Bell,
-      iconWrap: "bg-violet-100 text-violet-700",
-    },
-    {
-      href: isOwner ? "/premium/seller" : "/premium/buyer",
-      label: isOwner ? "Premium seller" : "Premium buyer",
-      sub: isOwner ? "Upgrade to improve visibility and lead access." : "Unlock faster contact and premium discovery tools.",
-      icon: Star,
-      iconWrap: "bg-amber-100 text-amber-700",
-      badge: "New",
-    },
-    {
-      onClick: () => {
-        clearSession();
-        router.push("/");
-      },
-      label: "Sign out",
-      sub: "Log out securely from this session.",
-      icon: LogOut,
-      iconWrap: "bg-red-100 text-red-600",
-      danger: true,
-    },
-  ];
+  const handleDeleteAccount = () => {
+    setShowDeleteDialog(false);
+    clearSession();
+    router.push("/");
+  };
 
-  const visibleMenu = accountMenu.filter((item) => {
-    if (item.ownerOnly && !isOwner) return false;
-    if (item.tenantOnly && isOwner) return false;
-    return true;
-  });
+  const today = new Date();
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.08),_transparent_28%),linear-gradient(180deg,_#f8fafc_0%,_#eef7f3_100%)] px-4 py-5 sm:px-6">
-      <div className="mx-auto max-w-6xl space-y-5 pb-28">
-        <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 text-white shadow-[0_30px_80px_rgba(15,23,42,0.18)]">
-          <div className="relative">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(52,211,153,0.26),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(45,212,191,0.16),_transparent_28%)]" />
-            <div className="relative grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.35fr_0.9fr] lg:items-end">
-              <div>
-                <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-emerald-300">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Account center
-                </div>
+    <div className="flex min-h-screen bg-slate-50 w-full pb-24 lg:pb-0">
+      <DesktopSidebar />
 
-                <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Manage your StayHub identity.</h1>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-                  Keep your personal details, account status, communication preferences, and role-specific tools organized in one place.
-                </p>
-
-                <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-slate-300">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2">
-                    <Shield className="h-4 w-4 text-emerald-300" />
-                    {user.is_verified ? "Verified account" : "Verification pending"}
-                  </div>
-                  {memberSince && (
-                    <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2">
-                      <User className="h-4 w-4 text-emerald-300" />
-                      Member since {memberSince}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-[24px] border border-white/10 bg-white/8 p-5 backdrop-blur-sm">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-xl font-black text-white shadow-lg shadow-emerald-500/20">
-                    {initials}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-lg font-semibold text-white">{displayName}</p>
-                    <p className="truncate text-sm text-slate-300">{user.email}</p>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl border border-white/10 bg-black/15 p-3">
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Role</p>
-                    <p className="mt-1 text-sm font-semibold text-white">{isOwner ? "Property Owner" : "Tenant"}</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-black/15 p-3">
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Profile</p>
-                    <p className="mt-1 text-sm font-semibold text-white">{completionPercent}% complete</p>
-                  </div>
-                </div>
-
-                <Link
-                  href="/profile"
-                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-emerald-300 hover:text-emerald-200"
-                >
-                  Open full profile <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
+      <main className="flex-1 flex flex-col min-w-0">
+        {/* ── Topbar ── */}
+        <header className="h-[72px] border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-40 bg-white">
+          {/* Mobile menu */}
+          <div className="flex items-center gap-4 lg:hidden">
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("toggle-mobile-sidebar"))}
+              className="text-slate-600 hover:text-slate-900 p-2 -ml-2 rounded-xl hover:bg-slate-100 transition-colors"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+              <Building2 className="w-4 h-4 text-emerald-400" />
             </div>
           </div>
-        </section>
 
-        {stepsLeft > 0 && (
-          <section className="rounded-[24px] border border-amber-200 bg-gradient-to-r from-amber-50 to-white p-5 shadow-sm">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
-                  <AlertCircle className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-bold text-slate-900">Your account profile is {completionPercent}% complete</h2>
-                  <p className="mt-1 text-sm text-slate-600">
-                    Complete the remaining {stepsLeft} detail{stepsLeft > 1 ? "s" : ""} to improve trust, recommendations, and account quality.
-                  </p>
-                </div>
-              </div>
-              <div className="sm:min-w-[220px]">
-                <div className="mb-2 h-2 overflow-hidden rounded-full bg-amber-100">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${completionPercent}%` }}
-                    transition={{ duration: 0.7, ease: "easeOut" }}
-                    className="h-full rounded-full bg-gradient-to-r from-amber-400 to-emerald-500"
-                  />
-                </div>
-                <Link href="/profile" className="inline-flex items-center gap-2 text-sm font-semibold text-amber-700 hover:text-amber-800">
-                  Complete profile <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            </div>
-          </section>
-        )}
-
-        <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Contact status</p>
-                <p className="mt-3 text-3xl font-black tracking-tight text-slate-950">
-                  {user.phone ? "Ready" : "Pending"}
-                </p>
-              </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                <Phone className="h-5 w-5" />
-              </div>
-            </div>
-            <p className="mt-3 text-sm leading-6 text-slate-500">
-              {user.phone ? "Your phone number is available for account-related actions." : "Add a phone number to improve verification and follow-up."}
-            </p>
+          {/* Desktop search */}
+          <div className="hidden lg:block flex-1 max-w-2xl relative mr-6">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <input
+              placeholder="Search by location, property or category"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-11 pr-12 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500/50 focus:bg-white transition-colors"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-mono border border-slate-200 rounded px-1.5 py-0.5 bg-white shadow-sm">
+              ⌘K
+            </span>
           </div>
 
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Location profile</p>
-                <p className="mt-3 text-3xl font-black tracking-tight text-slate-950">{user.location?.city || "Unset"}</p>
-              </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-700">
-                <MapPin className="h-5 w-5" />
-              </div>
-            </div>
-            <p className="mt-3 text-sm leading-6 text-slate-500">
-              {user.location?.state || "Add your city and address to make discovery and recommendations more accurate."}
-            </p>
-          </div>
-
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Verification</p>
-                <p className="mt-3 text-3xl font-black tracking-tight text-slate-950">{user.is_verified ? "Active" : "Review"}</p>
-              </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
-                <Shield className="h-5 w-5" />
-              </div>
-            </div>
-            <p className="mt-3 text-sm leading-6 text-slate-500">
-              {user.is_verified ? "Your account is verified and ready for full usage." : "Verification still needs attention before full trust signals appear."}
-            </p>
-          </div>
-        </section>
-
-        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70 sm:p-6">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600">Quick actions</p>
-              <h2 className="mt-1 text-xl font-bold text-slate-950">Manage your account workflow</h2>
-            </div>
-            <Link href="/dashboard" className="text-sm font-semibold text-emerald-700 hover:text-emerald-800">
-              Open dashboard
+          {/* Right actions */}
+          <div className="flex items-center gap-4 sm:gap-6 ml-auto">
+            <Link href="/favorites" className="hidden sm:flex flex-col items-center gap-1.5 group">
+              <Heart className="w-5 h-5 text-slate-500 group-hover:text-slate-900 transition-colors" />
+              <span className="text-[10px] font-semibold text-slate-500 group-hover:text-slate-900">Wishlist</span>
             </Link>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-3">
-            {primaryActions.map((action, index) => {
-              const Icon = action.icon;
-              return (
-                <motion.div
-                  key={action.label}
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.35, delay: index * 0.06 }}
-                >
-                  <Link
-                    href={action.href}
-                    className="group block rounded-[24px] border border-slate-200 bg-slate-50 p-5 transition-all hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-white hover:shadow-lg hover:shadow-emerald-100/40"
-                  >
-                    <div className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${action.tone} text-white shadow-lg`}>
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900">{action.label}</h3>
-                    <p className="mt-2 text-sm leading-6 text-slate-500">{action.sub}</p>
-                    <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 group-hover:text-emerald-800">
-                      Open <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                    </div>
-                  </Link>
-                </motion.div>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70 sm:p-6">
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600">Account tools</p>
-                <h2 className="mt-1 text-xl font-bold text-slate-950">Navigation and controls</h2>
+            <Link href="/chats" className="hidden sm:flex flex-col items-center gap-1.5 group relative">
+              <div className="relative">
+                <MessageSquare className="w-5 h-5 text-slate-500 group-hover:text-slate-900 transition-colors" />
+                {!unreadLoading && !unreadError && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-2 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold text-white shadow-sm">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </div>
+              <span className="text-[10px] font-semibold text-slate-500 group-hover:text-slate-900">Messages</span>
+            </Link>
+            <NotificationDropdown variant="icon-label" className="hidden sm:flex" />
+            <div className="hidden sm:block w-px h-8 bg-slate-200 mx-2" />
+            <ProfileDropdown />
+          </div>
+        </header>
+
+        {/* ── Page content ── */}
+        <div className="flex-1 px-4 py-6 sm:px-6 lg:px-10">
+          <div className="mx-auto max-w-6xl">
+            {/* Page header */}
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold text-slate-900">My Account</h1>
+              <p className="mt-1 text-sm text-slate-500">
+                Manage your profile, security settings, and account preferences.
+              </p>
             </div>
 
-            <div className="space-y-3">
-              {visibleMenu.map((item, index) => {
-                const Icon = item.icon;
-                const card = (
-                  <div className={`group flex items-center gap-4 rounded-[24px] border px-4 py-4 transition-all hover:shadow-md ${item.danger ? "border-red-100 bg-red-50/40 hover:border-red-200" : "border-slate-200 bg-slate-50 hover:border-emerald-200 hover:bg-white"}`}>
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${item.iconWrap}`}>
-                      <Icon className="h-5 w-5" />
+            {/* Two-column grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+              {/* ── LEFT COLUMN ── */}
+              <div className="space-y-6">
+                {/* Profile card */}
+                <Card>
+                  <div className="flex items-start gap-4">
+                    {/* Avatar */}
+                    <div className="flex-shrink-0 w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white text-xl font-black shadow-md shadow-emerald-200">
+                      {initials}
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-sm font-semibold ${item.danger ? "text-red-600" : "text-slate-900"}`}>{item.label}</span>
-                        {item.badge && (
-                          <span className="rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                            {item.badge}
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-lg font-bold text-slate-900">{displayName}</span>
+                        {user.is_verified && (
+                          <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                            <ShieldCheck className="w-3 h-3" />
+                            Verified
                           </span>
                         )}
                       </div>
-                      <p className="mt-0.5 text-xs text-slate-500">{item.sub}</p>
+                      {memberSince && (
+                        <p className="text-sm text-slate-500 mt-0.5">
+                          {user.role === "OWNER" ? "Owner" : "Tenant"} since {memberSince}
+                        </p>
+                      )}
                     </div>
-                    <ChevronRight className={`h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5 ${item.danger ? "text-red-400" : "text-slate-400"}`} />
                   </div>
-                );
 
-                return (
-                  <motion.div
-                    key={item.label}
-                    initial={{ opacity: 0, y: 14 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.35, delay: index * 0.05 }}
-                  >
-                    {item.onClick ? (
-                      <button onClick={item.onClick} className="block w-full text-left">
-                        {card}
-                      </button>
-                    ) : (
-                      <Link href={item.href!} className="block">
-                        {card}
-                      </Link>
-                    )}
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
+                  <div className="mt-5 space-y-3">
+                    {/* Email row */}
+                    <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <Mail className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                        <span className="text-sm text-slate-700 break-all">{user.email || "Not added"}</span>
+                      </div>
+                      {user.email && <VerifiedBadge />}
+                    </div>
 
-          <div className="space-y-5">
-            <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70 sm:p-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600">Account summary</p>
-              <h2 className="mt-1 text-xl font-bold text-slate-950">Your details at a glance</h2>
+                    {/* Phone row */}
+                    <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                        <span className="text-sm text-slate-700">{user.phone || "Not added"}</span>
+                      </div>
+                      {user.phone && <VerifiedBadge />}
+                    </div>
 
-              <div className="mt-5 space-y-4">
-                <div className="rounded-[24px] bg-slate-950 p-5 text-white">
-                  <p className="text-sm text-slate-300">Profile completion</p>
-                  <p className="mt-2 text-3xl font-black">{completionPercent}%</p>
-                  <p className="mt-2 text-sm text-slate-400">
-                    {stepsLeft > 0 ? `${stepsLeft} account details still need attention.` : "Everything important is filled in and ready."}
-                  </p>
-                </div>
+                    {/* Location row */}
+                    <div className="flex items-center gap-3 py-2">
+                      <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <span className="text-sm text-slate-700">{locationStr || "Location not added"}</span>
+                    </div>
+                  </div>
 
-                <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-                  <p className="text-sm font-semibold text-slate-900">Profile checklist</p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {profileFields.map((field) => (
-                      <span
-                        key={field.label}
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${field.done ? "border border-emerald-200 bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}
+                  <div className="mt-5">
+                    <button
+                      onClick={handleEditClick}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold transition-colors"
+                    >
+                      <User className="w-4 h-4" />
+                      Edit Profile
+                    </button>
+                  </div>
+                </Card>
+
+                {/* Personal Information card */}
+                <Card>
+                  <SectionTitle>Personal Information</SectionTitle>
+
+                  {isEditing ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                            First Name
+                          </label>
+                          <input
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors"
+                            placeholder="First name"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                            Last Name
+                          </label>
+                          <input
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors"
+                            placeholder="Last name"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                          Email Address
+                        </label>
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors"
+                          placeholder="Email address"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                          Phone Number
+                        </label>
+                        <input
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors"
+                          placeholder="Phone number"
+                        />
+                      </div>
+
+                      {saveError && (
+                        <p className="text-sm text-red-600">{saveError}</p>
+                      )}
+
+                      <div className="flex items-center gap-3 pt-1">
+                        <button
+                          onClick={handleSave}
+                          disabled={updateMutation.isPending}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white text-sm font-semibold transition-colors"
+                        >
+                          {updateMutation.isPending ? "Saving…" : "Save Changes"}
+                        </button>
+                        <button
+                          onClick={handleCancel}
+                          className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-semibold transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs font-semibold text-slate-500 mb-1">Full Name</p>
+                          <p className="text-sm text-slate-900">{displayName}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-slate-500 mb-1">Email Address</p>
+                          <p className="text-sm text-slate-900 break-all">{user.email || "—"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-slate-500 mb-1">Phone Number</p>
+                          <p className="text-sm text-slate-900">{user.phone || "—"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-slate-500 mb-1">Location</p>
+                          <p className="text-sm text-slate-900">{locationStr || "—"}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleEditClick}
+                        className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition-colors"
                       >
-                        {field.done ? <CheckCircle2 className="h-3.5 w-3.5" /> : <span className="h-2.5 w-2.5 rounded-full border border-slate-300" />}
-                        {field.label}
+                        Edit information →
+                      </button>
+                    </div>
+                  )}
+                </Card>
+
+                {/* Security card */}
+                <Card>
+                  <SectionTitle>Security</SectionTitle>
+                  <div className="space-y-1">
+                    <Link
+                      href="/settings"
+                      className="flex items-center justify-between py-3 px-1 rounded-xl hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center">
+                          <Key className="w-4 h-4 text-slate-600" />
+                        </div>
+                        <span className="text-sm font-semibold text-slate-800">Change Password</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
+
+                    <div className="flex items-center justify-between py-3 px-1 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center">
+                          <Shield className="w-4 h-4 text-slate-600" />
+                        </div>
+                        <span className="text-sm font-semibold text-slate-800">Two-Factor Authentication</span>
+                      </div>
+                      <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                        Enabled
                       </span>
-                    ))}
+                    </div>
+
+                    <Link
+                      href="/settings"
+                      className="flex items-center justify-between py-3 px-1 rounded-xl hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center">
+                          <Monitor className="w-4 h-4 text-slate-600" />
+                        </div>
+                        <span className="text-sm font-semibold text-slate-800">Active Sessions</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
                   </div>
-                </div>
+                </Card>
+
+                {/* Preferences card */}
+                <Card>
+                  <SectionTitle>Preferences</SectionTitle>
+                  <div className="space-y-1">
+                    <Link
+                      href="/notifications"
+                      className="flex items-center justify-between py-3 px-1 rounded-xl hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center">
+                          <Bell className="w-4 h-4 text-slate-600" />
+                        </div>
+                        <span className="text-sm font-semibold text-slate-800">Notification Settings</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
+
+                    <Link
+                      href="/settings"
+                      className="flex items-center justify-between py-3 px-1 rounded-xl hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center">
+                          <Mail className="w-4 h-4 text-slate-600" />
+                        </div>
+                        <span className="text-sm font-semibold text-slate-800">Email Preferences</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
+
+                    <Link
+                      href="/settings/privacy"
+                      className="flex items-center justify-between py-3 px-1 rounded-xl hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center">
+                          <Lock className="w-4 h-4 text-slate-600" />
+                        </div>
+                        <span className="text-sm font-semibold text-slate-800">Privacy Settings</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
+                  </div>
+                </Card>
               </div>
-            </div>
 
-            <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70 sm:p-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600">Contact details</p>
-              <h2 className="mt-1 text-xl font-bold text-slate-950">Communication info</h2>
+              {/* ── RIGHT COLUMN ── */}
+              <div className="space-y-6">
+                {/* Documents card */}
+                <Card>
+                  <SectionTitle>Documents</SectionTitle>
+                  <div className="space-y-3">
+                    {/* Identity Proof */}
+                    <div className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-4 h-4 text-slate-500" />
+                        <span className="text-sm font-medium text-slate-800">Identity Proof</span>
+                      </div>
+                      <VerifiedBadge />
+                    </div>
 
-              <div className="mt-5 space-y-3 text-sm text-slate-600">
-                <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <Mail className="mt-0.5 h-4 w-4 text-emerald-700" />
-                  <div>
-                    <p className="font-semibold text-slate-900">Email</p>
-                    <p className="mt-1 break-all">{user.email || "Not added"}</p>
+                    {/* Address Proof */}
+                    <div className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-4 h-4 text-slate-500" />
+                        <span className="text-sm font-medium text-slate-800">Address Proof</span>
+                      </div>
+                      <VerifiedBadge />
+                    </div>
+
+                    {/* Income Proof */}
+                    <div className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-4 h-4 text-slate-400" />
+                        <span className="text-sm font-medium text-slate-500">Income Proof</span>
+                      </div>
+                      <span className="text-xs font-semibold text-slate-400">Not Uploaded</span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <Phone className="mt-0.5 h-4 w-4 text-emerald-700" />
-                  <div>
-                    <p className="font-semibold text-slate-900">Phone</p>
-                    <p className="mt-1">{user.phone || "Not added"}</p>
-                  </div>
-                </div>
+                  <button className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm font-semibold transition-colors">
+                    <Upload className="w-4 h-4" />
+                    Manage Documents
+                  </button>
+                </Card>
 
-                <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <MapPin className="mt-0.5 h-4 w-4 text-emerald-700" />
-                  <div>
-                    <p className="font-semibold text-slate-900">Location</p>
-                    <p className="mt-1">
-                      {[user.location?.address, user.location?.city, user.location?.state, user.location?.pincode].filter(Boolean).join(", ") || "Location not added"}
-                    </p>
+                {/* Recent Account Activity card */}
+                <Card>
+                  <SectionTitle>Recent Account Activity</SectionTitle>
+                  <div className="rounded-xl bg-slate-50 border border-slate-100 p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                        <Monitor className="w-4 h-4 text-emerald-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-slate-700 leading-snug">
+                          Logged in from Chrome on Windows
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Noida, India &bull; {formatActivityDate(today)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                        Current Session
+                      </span>
+                    </div>
                   </div>
-                </div>
+                </Card>
+
+                {/* Sign out card */}
+                <Card>
+                  <button
+                    onClick={() => {
+                      clearSession();
+                      router.push("/");
+                    }}
+                    className="w-full flex items-center gap-3 py-2 px-1 rounded-xl hover:bg-slate-50 transition-colors group"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center">
+                      <LogOut className="w-4 h-4 text-red-500" />
+                    </div>
+                    <span className="text-sm font-semibold text-red-600">Sign Out</span>
+                  </button>
+                </Card>
+
+                {/* Delete Account card */}
+                <Card className="border-red-200 bg-red-50/30">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                      <Trash2 className="w-5 h-5 text-red-500" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-bold text-red-700">Delete Account</h3>
+                      <p className="mt-1 text-xs text-red-500 leading-relaxed">
+                        Permanently delete your account and all associated data. This action cannot be undone.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="mt-4 w-full py-2.5 rounded-xl border border-red-300 text-red-600 hover:bg-red-50 text-sm font-semibold transition-colors"
+                  >
+                    Delete Account
+                  </button>
+                </Card>
               </div>
             </div>
           </div>
-        </section>
-      </div>
+        </div>
+      </main>
+
+      {/* ── Delete Account Confirmation Dialog ── */}
+      {showDeleteDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 w-full max-w-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-slate-900">Delete Account?</h2>
+              <button
+                onClick={() => setShowDeleteDialog(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              This will permanently delete your account and all associated data. You will be signed out immediately. This action cannot be undone.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => setShowDeleteDialog(false)}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

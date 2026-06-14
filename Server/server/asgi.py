@@ -3,7 +3,7 @@ import os
 from django.conf import settings
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
-from channels.security.websocket import AllowedHostsOriginValidator, OriginValidator
+
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "server.settings")
 
@@ -16,13 +16,9 @@ websocket_application = JWTAuthMiddleware(
     URLRouter(websocket_urlpatterns),
 )
 
-if getattr(settings, "CORS_ALLOWED_ORIGINS", None):
-    websocket_application = OriginValidator(
-        websocket_application,
-        settings.CORS_ALLOWED_ORIGINS,
-    )
-elif not settings.DEBUG:
-    websocket_application = AllowedHostsOriginValidator(websocket_application)
+# We do not use Origin validation because mobile clients (Flutter)
+# often do not send standard Origin headers and we rely on JWT authentication.
+# websocket_application is passed directly to the router.
 
 application = ProtocolTypeRouter(
     {

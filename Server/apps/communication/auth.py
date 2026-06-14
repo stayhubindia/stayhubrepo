@@ -25,9 +25,6 @@ def _get_user_from_token(raw_token):
 class JWTAuthMiddleware(BaseMiddleware):
     """
     Authenticates WebSocket connections via the Authorization header only.
-    Token-in-query-string is no longer supported (TASK-18B).
-    Connections without a valid header token are accepted as AnonymousUser;
-    the consumer is responsible for closing unauthenticated connections.
     """
 
     async def __call__(self, scope, receive, send):

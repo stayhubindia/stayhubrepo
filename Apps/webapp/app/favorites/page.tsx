@@ -3,49 +3,67 @@
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Heart, MapPin, IndianRupee, Trash2, Search, Home,
-  ArrowRight, BedDouble, Sparkles, RefreshCw, WifiOff,
+  Heart, MapPin, IndianRupee, Trash2, Search, Building2,
+  Grid, List as ListIcon, ChevronDown, Menu, Bell, MessageSquare,
+  Sparkles
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useRequireAuth } from "@/hooks/use-route-guard";
 import { useFavorites, useFavoriteMutations } from "@/modules/favorites/hooks";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { DesktopSidebar } from "@/components/layout/desktop-sidebar";
+import { ProfileDropdown } from "@/components/layout/profile-dropdown";
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
+import { useUnreadCount } from "@/hooks/use-unread-count";
 
-const TYPE_COLORS: Record<string, string> = {
-  PG:         "from-violet-500 to-purple-600",
-  "1RK":      "from-blue-500 to-indigo-600",
-  "1BHK":     "from-emerald-500 to-teal-600",
-  "2BHK":     "from-amber-500 to-orange-500",
-  "3BHK":     "from-rose-500 to-pink-600",
-  HOUSE:      "from-cyan-500 to-sky-600",
-  COMMERCIAL: "from-slate-500 to-slate-700",
+const CATEGORIES = [
+  { id: "all", label: "All" },
+  { id: "apartment", label: "Apartments" },
+  { id: "house", label: "Independent House" },
+  { id: "villa", label: "Villa" },
+  { id: "pg", label: "PG / Hostel" },
+];
+
+// Helper to roughly categorize based on title
+const guessCategory = (title: string) => {
+  const t = title.toLowerCase();
+  if (t.includes("pg") || t.includes("hostel")) return "pg";
+  if (t.includes("villa")) return "villa";
+  if (t.includes("house") || t.includes("independent")) return "house";
+  if (t.includes("apartment") || t.includes("bhk") || t.includes("rk") || t.includes("flat")) return "apartment";
+  return "apartment"; // default fallback
 };
-
-const fmtRent = (rent: string) =>
-  Number(rent).toLocaleString("en-IN");
-
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
 export default function FavoritesPage() {
   const { user, isAllowed } = useRequireAuth();
   const favoritesQuery = useFavorites(!!user);
   const { removeMutation } = useFavoriteMutations();
+  const { count: unreadCount, isLoading: unreadLoading, isError: unreadError } = useUnreadCount();
 
+  const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [removing, setRemoving] = useState<string | null>(null);
 
   const favorites = useMemo(() => favoritesQuery.data ?? [], [favoritesQuery.data]);
 
   const filtered = useMemo(() => {
+    let result = favorites;
+    
+    // Filter by search
     const q = searchQuery.toLowerCase();
-    if (!q) return favorites;
-    return favorites.filter(
-      (f) =>
+    if (q) {
+      result = result.filter(f => 
         f.property_title.toLowerCase().includes(q) ||
         f.property_city?.toLowerCase().includes(q)
-    );
-  }, [favorites, searchQuery]);
+      );
+    }
+
+    // Filter by tab
+    if (activeTab !== "all") {
+      result = result.filter(f => guessCategory(f.property_title) === activeTab);
+    }
+
+    return result;
+  }, [favorites, searchQuery, activeTab]);
 
   const handleRemove = async (propertyId: string) => {
     setRemoving(propertyId);
@@ -58,226 +76,224 @@ export default function FavoritesPage() {
 
   if (!isAllowed || !user) return null;
 
+  // Counts for tabs
+  const getCount = (catId: string) => {
+    if (catId === "all") return favorites.length;
+    return favorites.filter(f => guessCategory(f.property_title) === catId).length;
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 pb-28">
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-rose-950 pt-8 pb-16 px-4 relative overflow-hidden">
-        <div className="absolute -top-12 -right-12 w-56 h-56 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-pink-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div
-          className="absolute inset-0 opacity-[0.03] pointer-events-none"
-          style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "18px 18px" }}
-        />
-        <div className="relative z-10 max-w-lg mx-auto">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/20 flex items-center justify-center">
-              <Heart className="w-5 h-5 text-rose-400 fill-rose-400" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">Saved Properties</h1>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {favoritesQuery.isLoading
-                  ? "Loading…"
-                  : `${favorites.length} ${favorites.length === 1 ? "property" : "properties"} saved`
-                }
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="flex min-h-screen bg-slate-50 w-full pb-24 lg:pb-0">
+      <DesktopSidebar />
 
-      {/* ── Content card ─────────────────────────────────────────────── */}
-      <div className="max-w-lg mx-auto px-4 -mt-6 space-y-4">
-
-        {/* Search bar */}
-        {favorites.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search saved properties…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-2xl pl-10 pr-4 py-3 text-sm text-slate-700 placeholder-slate-400 shadow-sm outline-none focus:ring-2 focus:ring-rose-400/30 focus:border-rose-300 transition"
-              />
-            </div>
-          </motion.div>
-        )}
-
-        {/* Loading skeletons */}
-        {favoritesQuery.isLoading && (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-pulse">
-                <div className="h-2 w-full bg-slate-200" />
-                <div className="p-4 space-y-3">
-                  <div className="h-4 bg-slate-200 rounded w-3/4" />
-                  <div className="h-3 bg-slate-100 rounded w-1/2" />
-                  <div className="flex gap-2 mt-2">
-                    <div className="h-7 bg-slate-100 rounded-xl flex-1" />
-                    <div className="h-7 bg-slate-100 rounded-xl flex-1" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Error */}
-        {favoritesQuery.isError && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-sm border border-red-100 p-6 text-center"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-3">
-              <WifiOff className="w-6 h-6 text-red-400" />
-            </div>
-            <p className="text-sm font-semibold text-slate-800 mb-1">Couldn&apos;t load saved properties</p>
-            <p className="text-xs text-slate-500 mb-4">
-              {getApiErrorMessage(favoritesQuery.error)}
-            </p>
-            <button
-              onClick={() => favoritesQuery.refetch()}
-              disabled={favoritesQuery.isFetching}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition"
-            >
-              <RefreshCw className={`w-4 h-4 ${favoritesQuery.isFetching ? "animate-spin" : ""}`} />
-              {favoritesQuery.isFetching ? "Retrying…" : "Try again"}
+      {/* ── Main Content ── */}
+      <main className="flex-1 flex flex-col min-w-0">
+        
+        {/* Topbar */}
+        <header className="h-[72px] border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-40 bg-white">
+          <div className="flex items-center gap-4 lg:hidden">
+            <button onClick={() => window.dispatchEvent(new CustomEvent("toggle-mobile-sidebar"))} className="text-slate-600 hover:text-slate-900 p-2 -ml-2 rounded-xl hover:bg-slate-100 transition-colors">
+              <Menu className="w-5 h-5" />
             </button>
-          </motion.div>
-        )}
-
-        {/* Empty state */}
-        {!favoritesQuery.isLoading && !favoritesQuery.isError && favorites.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-sm border border-slate-100 p-10 text-center"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-rose-50 flex items-center justify-center mx-auto mb-4">
-              <Heart className="w-8 h-8 text-rose-400" />
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+              <Building2 className="w-4 h-4 text-emerald-400" />
             </div>
-            <h3 className="text-base font-bold text-slate-800 mb-1">No saved properties yet</h3>
-            <p className="text-sm text-slate-500 mb-5">Tap the heart icon on a property to save it here</p>
-            <Link
-              href="/properties"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-sm font-semibold rounded-xl shadow shadow-emerald-500/25 hover:shadow-md transition"
-            >
-              <Search className="w-4 h-4" /> Browse Properties <ArrowRight className="w-4 h-4" />
+          </div>
+
+          <div className="hidden lg:block flex-1 max-w-2xl relative mr-6">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <input 
+              placeholder="Search by location, property or category" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-11 pr-12 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500/50 focus:bg-white transition-colors"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-mono border border-slate-200 rounded px-1.5 py-0.5 bg-white shadow-sm">⌘K</span>
+          </div>
+
+          <div className="flex items-center gap-4 sm:gap-6 ml-auto">
+            <Link href="/favorites" className="hidden sm:flex flex-col items-center gap-1.5 group">
+              <Heart className="w-5 h-5 text-emerald-500 transition-colors" />
+              <span className="text-[10px] font-semibold text-emerald-600">Wishlist</span>
             </Link>
-          </motion.div>
-        )}
+            <Link href="/chats" className="hidden sm:flex flex-col items-center gap-1.5 group relative">
+              <div className="relative">
+                <MessageSquare className="w-5 h-5 text-slate-500 group-hover:text-slate-900 transition-colors" />
+                {!unreadLoading && !unreadError && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-2 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold text-white shadow-sm">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] font-medium text-slate-500 group-hover:text-slate-900 mt-1">Messages</span>
+            </Link>
+            <NotificationDropdown variant="icon-label" className="hidden sm:flex" />
+            
+            <div className="hidden sm:block w-px h-8 bg-slate-100 mx-2" />
+            <ProfileDropdown />
+          </div>
+        </header>
 
-        {/* No search results */}
-        {!favoritesQuery.isLoading && favorites.length > 0 && filtered.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center"
-          >
-            <p className="text-sm text-slate-500">No saved properties match &ldquo;<span className="font-medium text-slate-700">{searchQuery}</span>&rdquo;</p>
-          </motion.div>
-        )}
+        <div className="p-6 lg:p-10 max-w-7xl mx-auto w-full">
+          
+          {/* Header Title */}
+          <div className="flex items-center gap-4 mb-2">
+            <Heart className="w-8 h-8 text-emerald-500 stroke-[2.5]" />
+            <h1 className="text-3xl font-black text-slate-900">My Wishlist</h1>
+          </div>
+          <p className="text-slate-500 mb-8 ml-12">Properties you&apos;ve saved for later</p>
 
-        {/* Favorites grid */}
-        <div className="space-y-3">
-          <AnimatePresence>
-            {filtered.map((fav, index) => {
-              const isRemoving = removing === fav.property_id;
-              // Derive a type label from the title as a fallback (API doesn't send type directly)
-              const typeMatch = Object.keys(TYPE_COLORS).find((t) =>
-                fav.property_title.toUpperCase().includes(t)
-              );
-              const gradient = typeMatch ? TYPE_COLORS[typeMatch] : "from-emerald-500 to-teal-600";
+          {/* Filters & Actions Bar */}
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-8">
+            <div className="flex items-center gap-3 overflow-x-auto pb-2 xl:pb-0 scrollbar-hide">
+              {CATEGORIES.map(cat => {
+                const count = getCount(cat.id);
+                const isActive = activeTab === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveTab(cat.id)}
+                    className={`flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
+                      isActive 
+                        ? "bg-emerald-50 border-emerald-200 text-emerald-700" 
+                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    {cat.label} ({count})
+                  </button>
+                );
+              })}
+            </div>
 
-              return (
-                <motion.div
-                  key={fav.id}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.35, ease: "easeOut", delay: index * 0.05 }}
-                  layout
-                  exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-                  className={`bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden transition-opacity ${isRemoving ? "opacity-50" : ""}`}
-                >
-                  {/* Top accent bar */}
-                  <div className={`h-1.5 w-full bg-gradient-to-r ${gradient}`} />
+            <div className="flex items-center gap-4 self-start xl:self-auto shrink-0">
+              <div className="flex items-center gap-2 text-sm text-slate-600 font-medium">
+                Sort by: <span className="font-bold text-slate-900 flex items-center gap-1 cursor-pointer">Recently Added <ChevronDown className="w-4 h-4" /></span>
+              </div>
+              <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1">
+                <button className="p-1.5 rounded bg-emerald-50 text-emerald-600"><Grid className="w-4 h-4" /></button>
+                <button className="p-1.5 rounded text-slate-400 hover:text-slate-600"><ListIcon className="w-4 h-4" /></button>
+              </div>
+            </div>
+          </div>
 
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      {/* Property icon + title */}
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0 shadow-sm`}>
-                          <Home className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">
-                            {fav.property_title}
-                          </h3>
-                          {fav.property_city && (
-                            <div className="flex items-center gap-1 mt-0.5">
-                              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                              <span className="text-xs text-slate-500 truncate">{fav.property_city}</span>
-                            </div>
-                          )}
-                        </div>
+          {/* Loading Skeletons */}
+          {favoritesQuery.isLoading && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden h-[300px] animate-pulse" />
+              ))}
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!favoritesQuery.isLoading && filtered.length === 0 && (
+            <div className="py-20 text-center">
+              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Heart className="w-10 h-10 text-slate-300" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 mb-2">No properties found</h2>
+              <p className="text-slate-500 mb-6">You haven&apos;t saved any properties that match your filters.</p>
+              <button 
+                onClick={() => { setActiveTab("all"); setSearchQuery(""); }}
+                className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl"
+              >
+                Clear Filters
+              </button>
+            </div>
+          )}
+
+          {/* Property Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-20">
+            <AnimatePresence>
+              {filtered.map((fav) => {
+                const isRemoving = removing === fav.property_id;
+                
+                return (
+                  <motion.div
+                    key={fav.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className={`bg-white rounded-2xl overflow-hidden border border-slate-200 hover:border-emerald-500/30 transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1 flex flex-col ${isRemoving ? "opacity-50 pointer-events-none" : ""}`}
+                  >
+                    {/* Image Placeholder */}
+                    <div className="relative h-48 w-full bg-slate-100 shrink-0">
+                      <img 
+                        src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80" 
+                        alt="Property"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-80" />
+                      
+                      <div className="absolute top-4 left-4">
+                        <span className="px-2.5 py-1 rounded-md text-[10px] font-bold text-white shadow-lg uppercase tracking-wide bg-emerald-500">
+                          Saved
+                        </span>
                       </div>
-
-                      {/* Remove button */}
-                      <button
-                        onClick={() => handleRemove(fav.property_id)}
-                        disabled={isRemoving}
-                        className="shrink-0 w-9 h-9 rounded-xl bg-red-50 hover:bg-red-100 border border-red-100 flex items-center justify-center text-red-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Remove from saved"
-                      >
-                        {isRemoving ? (
-                          <span className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
+                      
+                      <button className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white flex items-center justify-center text-rose-500 shadow-md">
+                        <Heart className="w-4 h-4 fill-rose-500" />
                       </button>
                     </div>
 
-                    {/* Rent + saved date */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1">
-                        <IndianRupee className="w-3.5 h-3.5 text-emerald-600" />
-                        <span className="text-base font-black text-slate-900">{fmtRent(fav.property_rent)}</span>
-                        <span className="text-xs text-slate-400 font-normal">/mo</span>
+                    {/* Content */}
+                    <div className="p-5 flex-1 flex flex-col">
+                      <h3 className="font-extrabold text-slate-900 text-[15px] line-clamp-1 mb-1.5">
+                        {fav.property_title}
+                      </h3>
+                      <p className="text-slate-400 text-xs flex items-center gap-1.5 mb-4">
+                        <MapPin className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">{fav.property_city || "Location details upon request"}</span>
+                      </p>
+
+                      <div className="mb-6 flex items-baseline gap-1">
+                        <span className="text-xl font-black text-emerald-500 tracking-tight">₹{Number(fav.property_rent).toLocaleString("en-IN")}</span>
+                        <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">/month</span>
                       </div>
-                      <span className="flex items-center gap-1 text-[10px] text-slate-400">
-                        <Sparkles className="w-3 h-3" />
-                        Saved {fmtDate(fav.created_at)}
-                      </span>
+
+                      <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
+                        <span className="flex items-center gap-1 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                           <Sparkles className="w-3 h-3 text-amber-500" /> 
+                           Added {new Date(fav.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                        </span>
+                        
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleRemove(fav.property_id);
+                          }}
+                          disabled={isRemoving}
+                          className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Remove
+                        </button>
+                      </div>
                     </div>
-
-                    {/* CTA */}
-                    <Link
-                      href={`/properties/${fav.property_id}`}
-                      className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-sm font-semibold transition"
-                    >
-                      <BedDouble className="w-4 h-4" /> View Property <ArrowRight className="w-4 h-4 ml-auto" />
-                    </Link>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
         </div>
+      </main>
 
-        {/* Browse more CTA (when there are already some saved) */}
-        {!favoritesQuery.isLoading && favorites.length > 0 && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-            <Link
-              href="/properties"
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-emerald-300 hover:text-emerald-600 text-sm font-medium transition"
-            >
-              <Search className="w-4 h-4" /> Browse more properties
-            </Link>
-          </motion.div>
-        )}
+      {/* Sticky Bottom Bar */}
+      <div className="fixed bottom-0 lg:bottom-4 left-0 lg:left-[280px] right-0 lg:right-4 z-40 p-4 lg:p-0">
+        <div className="bg-white rounded-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.08)] border border-slate-200 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4 text-center sm:text-left">
+            <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 mx-auto sm:mx-0">
+              <Heart className="w-5 h-5 text-emerald-500 fill-emerald-500" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-900 text-sm">{favorites.length} properties in your wishlist</p>
+              <p className="text-xs text-slate-500 mt-0.5">Keep exploring and find the perfect place to stay.</p>
+            </div>
+          </div>
+          <button className="w-full sm:w-auto px-6 py-2.5 rounded-xl border border-emerald-200 text-emerald-600 font-bold text-sm hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2">
+            <Trash2 className="w-4 h-4" /> Clear Wishlist
+          </button>
+        </div>
       </div>
     </div>
   );

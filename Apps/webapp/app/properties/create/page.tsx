@@ -3,10 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Building2, Heart, Menu, MessageSquare, Search } from "lucide-react";
 import { useRequireAuth } from "@/hooks/use-route-guard";
 import { useCreateProperty } from "@/modules/property/hooks";
 import { getMissingOwnerProfileFields } from "@/lib/profile-completion";
+import { DesktopSidebar } from "@/components/layout/desktop-sidebar";
+import { ProfileDropdown } from "@/components/layout/profile-dropdown";
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
+import { useUnreadCount } from "@/hooks/use-unread-count";
 
 export default function CreatePropertyPage() {
   const router = useRouter();

@@ -10,6 +10,7 @@ class AppUser extends Equatable {
     this.phone,
     this.profilePicture,
     this.locationCity,
+    this.dateJoined,
   });
 
   final String id;
@@ -22,6 +23,7 @@ class AppUser extends Equatable {
   final String? phone;
   final String? profilePicture;
   final String? locationCity;
+  final DateTime? dateJoined;
 
   String get fullName => '$firstName $lastName'.trim();
   bool get isOwner => role == 'OWNER';
@@ -37,6 +39,9 @@ class AppUser extends Equatable {
         profilePicture: json['profile_picture'] as String?,
         locationCity: (json['location'] as Map<String, dynamic>?)?['city']
             as String?,
+        dateJoined: json['date_joined'] != null
+            ? DateTime.tryParse(json['date_joined'] as String)
+            : null,
       );
 
   Map<String, dynamic> toJson() => {
@@ -47,6 +52,7 @@ class AppUser extends Equatable {
         'role': role,
         'phone': phone,
         'profile_picture': profilePicture,
+        if (dateJoined != null) 'date_joined': dateJoined?.toIso8601String(),
       };
 
   AppUser copyWith({
@@ -65,9 +71,10 @@ class AppUser extends Equatable {
         phone: phone ?? this.phone,
         profilePicture: profilePicture ?? this.profilePicture,
         locationCity: locationCity ?? this.locationCity,
+        dateJoined: dateJoined ?? this.dateJoined,
       );
 
   @override
   List<Object?> get props =>
-      [id, email, firstName, lastName, role, phone, profilePicture];
+      [id, email, firstName, lastName, role, phone, profilePicture, dateJoined];
 }

@@ -15,6 +15,17 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  // Permanent redirects for dead/duplicate pages
+  async redirects() {
+    return [
+      { source: "/properties/create", destination: "/my-ads/new",    permanent: true },
+      { source: "/messages",          destination: "/chats",          permanent: true },
+      { source: "/signup",            destination: "/",               permanent: true },
+      { source: "/owner-signup",      destination: "/",               permanent: true },
+      { source: "/bookings",          destination: "/my-bookings",    permanent: true },
+    ];
+  },
+
   // Security headers
   async headers() {
     return [

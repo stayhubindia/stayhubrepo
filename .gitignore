@@ -96,3 +96,5 @@ ServerCOMMAND.txt
 
 /docs
 .env*.local
+
+.kiro/

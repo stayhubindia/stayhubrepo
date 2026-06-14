@@ -1,26 +1,29 @@
-import 'package:flutter/foundation.dart';
-
-enum Env { dev, prod }
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AppConfig {
   AppConfig._();
 
-  static const Env env = kDebugMode ? Env.dev : Env.prod;
+  static String get baseUrl =>
+      dotenv.get('API_BASE_URL', fallback: 'https://api.stayhubindia.com');
 
-  // ── Base URLs ─────────────────────────────────────────────
+  static String get wsBaseUrl =>
+      dotenv.get('WS_BASE_URL', fallback: 'wss://api.stayhubindia.com');
 
-  static const String _devBaseUrl = 'https://6lr008c1-8000.inc1.devtunnels.ms/';
-  static const String _prodBaseUrl = 'https://api.stayhub.in';
+  static String get appSecret =>
+      dotenv.get('APP_SECRET', fallback: '');
 
-  static String get baseUrl => env == Env.dev ? _devBaseUrl : _prodBaseUrl;
+  static String get googleMapsApiKey =>
+      dotenv.get('GOOGLE_MAPS_API_KEY', fallback: '');
 
-  // WebSocket base  (ws:// in dev, wss:// in prod)
-  static String get wsBaseUrl => env == Env.dev
-      ? 'wss://6lr008c1-8000.inc1.devtunnels.ms/'
-      : 'wss://api.stayhub.in';
+  /// A comma-separated list of SHA-256 certificate fingerprints (hex strings).
+  /// Example: "a1b2c3d4..., e5f6g7h8..."
+  static List<String> get sslPinningHashes {
+    final hashes = dotenv.get('SSL_PINNING_HASHES', fallback: '');
+    if (hashes.isEmpty) return [];
+    return hashes.split(',').map((s) => s.trim().toLowerCase()).toList();
+  }
 
-  // ── Timeouts ─────────────────────────────────────────────
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 30);
-  static const Duration sendTimeout = Duration(seconds: 30);
+  static const Duration sendTimeout    = Duration(seconds: 30);
 }

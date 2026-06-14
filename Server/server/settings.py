@@ -4,6 +4,11 @@ import os
 from dotenv import load_dotenv
 from corsheaders.defaults import default_headers
 from django.core.exceptions import ImproperlyConfigured
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.redis import RedisIntegration
+from sentry_sdk.integrations.celery import CeleryIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
 
 # ======================================================
 # BASE
@@ -201,12 +206,12 @@ REST_FRAMEWORK = {
         "user": "1000/day",
         "anon": "100/day",
         # Auth & account flows
-        "auth": "5/hour",
-        "signup": "3/hour",
+        "auth": "10/hour",
+        "signup": "10/hour",
         # Feature-level scopes
         "contact": "10/hour",
-        "contact_create": "10/hour",
-        "message_send": "30/minute",
+        "contact_create": "20/hour",
+        "message_send": "50/minute",
         "property_read": "1000/hour",
         "property_write": "100/hour",
         # Analytics
@@ -241,7 +246,7 @@ SPECTACULAR_SETTINGS = {
 # ======================================================
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "AUTH_HEADER_TYPES": ("Bearer",),
     "SIGNING_KEY": get_secret("JWT_SECRET_KEY", "JWT_SECRET_KEY_FILE", SECRET_KEY),
@@ -436,3 +441,52 @@ DISPOSABLE_EMAIL_DOMAINS = [
 # ======================================================
 
 AUDIT_LOG_ENABLED = get_env("AUDIT_LOG_ENABLED", "False") == "True"
+
+# ======================================================
+# SENTRY ERROR TRACKING
+# ======================================================
+
+SENTRY_ENVIRONMENT = get_env("SENTRY_ENVIRONMENT", "development" if DEBUG else "production")
+SENTRY_DSN = get_env("SENTRY_DSN", "")
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=SENTRY_ENVIRONMENT,
+        # Release version for tracking
+        release=get_env("SENTRY_RELEASE", "1.0.0"),
+        # Integrations
+        integrations=[
+            DjangoIntegration(),
+            RedisIntegration(),
+            CeleryIntegration(),
+            LoggingIntegration(
+                level=10,  # Capture debug level and above
+                event_level=20,  # Send errors (level 20+) as events
+            ),
+        ],
+        # Performance Monitoring
+        traces_sample_rate=float(get_env("SENTRY_TRACES_SAMPLE_RATE", "0.1" if DEBUG else "0.05")),
+        # Error tracking
+        sample_rate=float(get_env("SENTRY_ERROR_SAMPLE_RATE", "1.0" if DEBUG else "0.9")),
+        # Data collection
+        send_default_pii=get_env("SENTRY_SEND_PII", "False") == "True",
+        # Ignore errors in development
+        ignore_errors=[
+            "django.exceptions.DisallowedHost",
+            "django.core.exceptions.ValidationError",
+        ] if DEBUG else [],
+        # Attach stack traces
+        attach_stacktrace=True,
+    )
+    
+    # Set extra context
+    sentry_sdk.set_context(
+        "django_env",
+        {
+            "debug": DEBUG,
+            "environment": SENTRY_ENVIRONMENT,
+            "timezone": TIME_ZONE,
+            "language": LANGUAGE_CODE,
+        },
+    )

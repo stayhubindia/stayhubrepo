@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { LoaderCircle, Phone, MapPin, CheckCircle } from "lucide-react";
 import { useRequireAuth } from "@/hooks/use-route-guard";
@@ -27,6 +27,24 @@ export default function OwnerOnboardingPage() {
     lat: null as number | null,
     lng: null as number | null,
   });
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        first_name: user.first_name || "",
+        last_name: user.last_name || "",
+        phone: user.phone || "",
+        address: user.location?.address || "",
+        locality: user.location?.locality || "",
+        city: user.location?.city || "",
+        state: user.location?.state || "",
+        country: user.location?.country || "India",
+        pincode: user.location?.pincode || "",
+        lat: user.location?.latitude ? Number(user.location.latitude) : null,
+        lng: user.location?.longitude ? Number(user.location.longitude) : null,
+      });
+    }
+  }, [user]);
 
   if (!isAllowed || !user) return null;
 

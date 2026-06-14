@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/storage/secure_storage_service.dart';
@@ -31,7 +32,8 @@ class WebSocketService {
   static const _maxRetries = 5;
 
   Stream<WsMessage> get stream => _controller.stream;
-  bool get isConnected => _channel != null;
+  bool _isAuthenticated = false;
+  bool get isConnected => _channel != null && _isAuthenticated;
 
   Future<void> connect(String conversationId) async {
     _conversationId = conversationId;
@@ -42,21 +44,51 @@ class WebSocketService {
 
   Future<void> _doConnect() async {
     final token = await _storage.getAccessToken();
-    if (token == null || _disposed) return;
+    if (token == null || _disposed) {
+      debugPrint('[WS] Cannot connect — no token or disposed');
+      return;
+    }
 
     final uri = Uri.parse(
-      '${AppConfig.wsBaseUrl}/ws/chat/$_conversationId/?token=$token',
+      '${AppConfig.wsBaseUrl}/ws/communication/conversations/$_conversationId/',
     );
+
+    debugPrint('[WS] Connecting to: $uri');
 
     try {
       _channel = WebSocketChannel.connect(uri);
+
+      await _channel!.ready;
+      debugPrint('[WS] Handshake complete');
+
+      // Set up the stream listener
       _sub = _channel!.stream.listen(
         _onData,
-        onError: (_) => _onDisconnected(),
-        onDone: _onDisconnected,
+        onError: (e) {
+          debugPrint('[WS] Stream error: $e');
+          _onDisconnected();
+        },
+        onDone: () {
+          debugPrint('[WS] Stream closed');
+          _onDisconnected();
+        },
       );
+
+      if (_disposed || _channel == null) return;
+
+      // Send authenticate message
+      debugPrint('[WS] Sending authenticate...');
+      _channel!.sink.add(jsonEncode({
+        'action': 'authenticate',
+        'token': token,
+      }));
+      _isAuthenticated = true;
+
       _retryCount = 0;
-    } catch (_) {
+      debugPrint('[WS] Connected and authenticated');
+    } catch (e) {
+      debugPrint('[WS] Connection failed: $e');
+      _channel = null;
       _scheduleReconnect();
     }
   }
@@ -65,15 +97,20 @@ class WebSocketService {
     if (raw is! String) return;
     try {
       final json = jsonDecode(raw) as Map<String, dynamic>;
-      final type = _parseType(json['type'] as String?);
+      final typeStr = json['type'] as String?;
+      final type = _parseType(typeStr);
+      // Log all incoming WS messages for debugging
+      debugPrint('[WS] Received: type=$typeStr payload=$json');
       _controller.add(WsMessage(type: type, payload: json));
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[WS] Parse error: $e raw=$raw');
       _controller.add(const WsMessage(type: WsMessageType.error));
     }
   }
 
   void _onDisconnected() {
     _channel = null;
+    _isAuthenticated = false;
     _sub?.cancel();
     _sub = null;
     if (!_disposed) _scheduleReconnect();
@@ -86,16 +123,29 @@ class WebSocketService {
     Future.delayed(delay, _doConnect);
   }
 
-  void sendMessage(String content) {
-    _send({'type': 'chat_message', 'content': content});
+  void sendMessage(String content, {String? clientId}) {
+    final data = <String, dynamic>{
+      'action': 'send_message',
+      'content': content,
+    };
+    if (clientId != null) data['client_id'] = clientId;
+    _send(data);
   }
 
-  void sendTyping() {
-    _send({'type': 'typing'});
+  void sendTyping(bool isTyping) {
+    _send({'action': 'typing', 'is_typing': isTyping});
+  }
+
+  void markAsRead() {
+    _send({'action': 'mark_read'});
   }
 
   void _send(Map<String, dynamic> data) {
-    if (_channel == null) return;
+    if (_channel == null || !_isAuthenticated) {
+      debugPrint('[WS] Cannot send — not connected/authenticated: $data');
+      return;
+    }
+    debugPrint('[WS] Sending: $data');
     _channel!.sink.add(jsonEncode(data));
   }
 
@@ -113,14 +163,16 @@ class WebSocketService {
 
   static WsMessageType _parseType(String? type) {
     switch (type) {
-      case 'chat_message':
+      case 'message.created':
         return WsMessageType.chatMessage;
-      case 'typing':
+      case 'typing.updated':
         return WsMessageType.typing;
-      case 'read':
+      case 'read.updated':
         return WsMessageType.read;
       case 'connected':
         return WsMessageType.connected;
+      case 'error':
+        return WsMessageType.error;
       default:
         return WsMessageType.unknown;
     }

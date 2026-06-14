@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { BadgeIndianRupee, Star, TrendingUp } from "lucide-react";
+import { BadgeIndianRupee, Building2, Heart, Menu, MessageSquare, Search, Star, TrendingUp } from "lucide-react";
+import { DesktopSidebar } from "@/components/layout/desktop-sidebar";
+import { ProfileDropdown } from "@/components/layout/profile-dropdown";
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
+import { useUnreadCount } from "@/hooks/use-unread-count";
 
 const benefits = [
   {

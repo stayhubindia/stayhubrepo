@@ -48,6 +48,7 @@ export interface CreatePropertyInput {
   lng?: number | null;
   preferred_tenant?: string;
   amenity_ids?: number[];
+  available_from?: string;
 }
 
 export function useMyProperties(enabled = true) {
@@ -118,6 +119,78 @@ export function useMarkRented() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["properties"] });
+    },
+  });
+}
+
+export function useUploadPropertyImage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, file, isPrimary = false, order = 0 }: { id: string; file: File; isPrimary?: boolean; order?: number }) => {
+      const formData = new FormData();
+      formData.append("image", file);
+      formData.append("is_primary", String(isPrimary));
+      formData.append("order", String(order));
+
+      const response = await http.post(`/properties/${id}/images/`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["properties"] });
+      queryClient.invalidateQueries({ queryKey: ["property", variables.id] });
+    },
+  });
+}
+
+export function useDeletePropertyImage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ propertyId, imageId }: { propertyId: string; imageId: string }) => {
+      const response = await http.delete(`/properties/${propertyId}/images/${imageId}/`);
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["properties"] });
+      queryClient.invalidateQueries({ queryKey: ["property", variables.propertyId] });
+    },
+  });
+}
+
+export function useSetPrimaryPropertyImage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ propertyId, imageId }: { propertyId: string; imageId: string }) => {
+      const response = await http.post(`/properties/${propertyId}/images/${imageId}/set-primary/`);
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["properties"] });
+      queryClient.invalidateQueries({ queryKey: ["property", variables.propertyId] });
+    },
+  });
+}
+
+export function useProperty(id: string) {
+  return useQuery<Property>({
+    queryKey: ["property", id],
+    queryFn: async () => {
+      const response = await http.get(`/properties/${id}/`);
+      return response.data;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useAmenities() {
+  return useQuery<{ id: number; name: string }[]>({
+    queryKey: ["amenities"],
+    queryFn: async () => {
+      const response = await http.get("/amenities/");
+      return response.data.results || response.data;
     },
   });
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
   BarChart2,
+  CalendarCheck,
   ChevronRight,
   FileText,
   Heart,
@@ -17,10 +18,11 @@ import {
   Settings,
   User,
   UserCircle,
+  Building2,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/store/auth-store";
 import { useProactiveTokenRefresh } from "@/hooks/use-proactive-refresh";
 import { broadcastLogout, useSessionSync } from "@/hooks/use-session-sync";
@@ -81,15 +83,15 @@ function SideLink({
     <Link
       href={href}
       onClick={onClick}
-      className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition-colors ${
+      className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm transition-all duration-200 ${
         active
-          ? "bg-indigo-50 text-indigo-700"
-          : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+          ? "bg-emerald-50 text-emerald-700 font-bold"
+          : "text-slate-500 font-medium hover:bg-slate-50 hover:text-slate-900"
       }`}
     >
-      <Icon className={`h-4.5 w-4.5 shrink-0 ${active ? "text-indigo-600" : "text-slate-500"}`} />
+      <Icon className={`h-4.5 w-4.5 shrink-0 ${active ? "text-emerald-600" : ""}`} />
       <span className="flex-1">{label}</span>
-      {active && <ChevronRight className="h-4 w-4 text-indigo-400" />}
+      {active && <ChevronRight className="h-4 w-4 text-emerald-400" />}
     </Link>
   );
 }
@@ -106,6 +108,12 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
     undefined,
     () => router.push("/auth"),
   );
+
+  useEffect(() => {
+    const handleToggle = () => setShowSidebar(true);
+    window.addEventListener("toggle-mobile-sidebar", handleToggle);
+    return () => window.removeEventListener("toggle-mobile-sidebar", handleToggle);
+  }, []);
 
   const userName = useMemo(() => {
     if (!user) return "User";
@@ -130,8 +138,31 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
 
   if (!user || isStandalone) return <>{children}</>;
 
-  const isHome = pathname === "/";
-  const isDashboard = pathname === "/dashboard";
+  // Pages that have their own sidebar + topbar — suppress the global header on these
+  const FULL_PAGE_ROUTES = [
+    "/",
+    "/dashboard",
+    "/bookings",
+    "/my-bookings",
+    "/properties",
+    "/favorites",
+    "/saved",
+    "/chats",
+    "/notifications",
+    "/my-ads",
+    "/owner/properties",
+    "/analytics",
+    "/leads",
+    "/account",
+    "/profile",
+    "/settings",
+    "/reviews",
+    "/payments",
+    "/refer",
+  ];
+  const isFullPage = FULL_PAGE_ROUTES.some(r =>
+    r === "/" ? pathname === "/" : pathname.startsWith(r)
+  );
 
   const handleLogout = () => {
     broadcastLogout();
@@ -141,10 +172,10 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
   };
 
   return (
-    <div className={`min-h-screen ${(isDashboard || isHome) ? "bg-black" : "bg-slate-50 pb-20"}`}>
+    <div className={`min-h-screen ${isFullPage ? "" : "bg-slate-50"} pb-24`}>
 
-      {/* ── Top Header (hidden on home/dashboard) ── */}
-      {(!isHome && !isDashboard) && (
+      {/* ── Top Header (hidden on home/dashboard/bookings) ── */}
+      {!isFullPage && (
         <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
           <div className="mx-auto flex h-14 max-w-screen-xl items-center justify-between gap-4 px-4">
 
@@ -210,18 +241,17 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
               className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col overflow-hidden bg-white shadow-2xl"
             >
               {/* ── Drawer header ── */}
-              <div className="relative overflow-hidden bg-slate-950 px-5 pb-6 pt-5">
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,_rgba(99,102,241,0.3),_transparent_50%),radial-gradient(circle_at_80%_20%,_rgba(139,92,246,0.2),_transparent_40%)]" />
+              <div className="relative border-b border-slate-100 bg-[#FDFDFD] px-5 pb-6 pt-5">
                 <div className="relative flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/20 text-lg font-bold text-indigo-300 ring-2 ring-indigo-500/20">
-                      {userInitials}
+                    <div className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden">
+                      <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id}`} alt="Profile" className="w-full h-full object-cover" />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate font-bold text-white">{userName}</p>
-                      <p className="mt-0.5 truncate text-xs text-slate-400">{user.email || user.phone}</p>
+                      <p className="truncate font-bold text-slate-900">{userName}</p>
+                      <p className="mt-0.5 truncate text-xs font-medium text-slate-500">{user.email || user.phone}</p>
                       {roleLabel && (
-                        <span className="mt-1.5 inline-block rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2 py-0.5 text-[10px] font-semibold text-indigo-300">
+                        <span className="mt-1.5 inline-block rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-600">
                           {roleLabel}
                         </span>
                       )}
@@ -229,7 +259,7 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
                   </div>
                   <button
                     onClick={() => setShowSidebar(false)}
-                    className="rounded-xl border border-white/10 bg-white/5 p-1.5 text-white/70 hover:bg-white/10"
+                    className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -237,12 +267,12 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
               </div>
 
               {/* ── Nav links ── */}
-              <div className="flex-1 overflow-y-auto px-3 py-4">
-                <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Navigation</p>
+              <div className="flex-1 overflow-y-auto px-4 py-6 bg-[#FDFDFD]">
+                <p className="mb-3 px-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Navigation</p>
                 <div className="space-y-1">
-                  <SideLink href="/" icon={Home} label="Home" active={pathname === "/"} onClick={() => setShowSidebar(false)} />
-                  <SideLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname.startsWith("/dashboard")} onClick={() => setShowSidebar(false)} />
+                  <SideLink href="/" icon={Building2} label="Home" active={pathname === "/"} onClick={() => setShowSidebar(false)} />
                   <SideLink href="/properties" icon={Search} label="Search Properties" active={pathname.startsWith("/properties")} onClick={() => setShowSidebar(false)} />
+                  <SideLink href="/my-bookings" icon={CalendarCheck} label="My Bookings" active={pathname.startsWith("/my-bookings")} onClick={() => setShowSidebar(false)} />
                   <SideLink href="/chats" icon={MessageCircle} label="Chats" active={pathname.startsWith("/chats")} onClick={() => setShowSidebar(false)} />
                 </div>
 
@@ -291,8 +321,7 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
       {/* ── Main content ── */}
       <main>{children}</main>
 
-      {/* ── Bottom Navigation ── */}
-      {(!isDashboard && !isHome) && (
+      {/* ── Bottom Navigation — always visible on all authenticated pages ── */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-screen-sm items-end justify-around px-2 pt-2 pb-[max(8px,env(safe-area-inset-bottom))]">
 
@@ -301,53 +330,53 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
             <Home />
           </NavItem>
 
-          {/* Chats */}
-          <NavItem href="/chats" label="Chats" active={pathname.startsWith("/chats")}>
-            <MessageCircle />
-          </NavItem>
-
-          {/* Centre FAB */}
-          <Link
-            href={user.role === "OWNER" ? "/my-ads/new" : "/properties"}
-            className="flex flex-col items-center gap-1 -mt-5"
-          >
-            <span
-              className={`flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg transition-transform active:scale-95 ${
-                user.role === "OWNER"
-                  ? "bg-gradient-to-br from-violet-500 to-indigo-600 shadow-indigo-500/30"
-                  : "bg-gradient-to-br from-indigo-500 to-violet-600 shadow-indigo-500/30"
-              }`}
-            >
-              {user.role === "OWNER" ? (
-                <Plus className="h-7 w-7 text-white" strokeWidth={2.5} />
-              ) : (
-                <Search className="h-6 w-6 text-white" strokeWidth={2.5} />
-              )}
-            </span>
-            <span className="text-[10px] font-semibold text-slate-500">
-              {user.role === "OWNER" ? "Post Ad" : "Search"}
-            </span>
-          </Link>
-
-          {/* My Ads / Saved */}
           {user.role === "OWNER" ? (
-            <NavItem href="/my-ads" label="My Ads" active={pathname.startsWith("/my-ads")}>
-              <FileText />
-            </NavItem>
+            /* ── OWNER nav: Home | Chats | Post Ad (FAB) | My Ads | Account ── */
+            <>
+              <NavItem href="/chats" label="Chats" active={pathname.startsWith("/chats")}>
+                <MessageCircle />
+              </NavItem>
+
+              {/* Centre FAB — Post Ad */}
+              <Link href="/my-ads/new" className="flex flex-col items-center gap-1 -mt-5">
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-lg shadow-indigo-500/30 transition-transform active:scale-95">
+                  <Plus className="h-7 w-7 text-white" strokeWidth={2.5} />
+                </span>
+                <span className="text-[10px] font-semibold text-slate-500">Post Ad</span>
+              </Link>
+
+              <NavItem href="/my-ads" label="My Ads" active={pathname.startsWith("/my-ads")}>
+                <FileText />
+              </NavItem>
+            </>
           ) : (
-            <NavItem href="/favorites" label="Saved" active={pathname.startsWith("/favorites")}>
-              <Heart />
-            </NavItem>
+            /* ── TENANT nav: Home | Bookings | Search (FAB) | Chats | Account ── */
+            <>
+              <NavItem href="/my-bookings" label="Bookings" active={pathname.startsWith("/my-bookings")}>
+                <CalendarCheck />
+              </NavItem>
+
+              {/* Centre FAB — Search */}
+              <Link href="/properties" className="flex flex-col items-center gap-1 -mt-5">
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30 transition-transform active:scale-95">
+                  <Search className="h-6 w-6 text-white" strokeWidth={2.5} />
+                </span>
+                <span className="text-[10px] font-semibold text-slate-500">Search</span>
+              </Link>
+
+              <NavItem href="/chats" label="Chats" active={pathname.startsWith("/chats")}>
+                <MessageCircle />
+              </NavItem>
+            </>
           )}
 
-          {/* Account */}
+          {/* Account — both roles */}
           <NavItem href="/account" label="Account" active={pathname.startsWith("/account")}>
             <User />
           </NavItem>
 
         </div>
       </nav>
-      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../domain/entities/property.dart';
@@ -33,10 +34,14 @@ class PropertyCard extends StatelessWidget {
                   child: AspectRatio(
                     aspectRatio: 16 / 9,
                     child: property.images.isNotEmpty
-                        ? Image.network(
-                            property.images.first,
+                        ? CachedNetworkImage(
+                            imageUrl: property.images.first,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _PlaceholderImage(),
+                            placeholder: (context, url) => Container(color: AppColors.surfaceVariant),
+                            errorWidget: (context, url, error) {
+                              debugPrint('Error loading image $url: $error');
+                              return _PlaceholderImage();
+                            },
                           )
                         : _PlaceholderImage(),
                   ),

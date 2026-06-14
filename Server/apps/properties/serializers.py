@@ -20,6 +20,11 @@ class PropertyListSerializer(serializers.ModelSerializer):
     address = serializers.CharField(source="location.address", read_only=True, allow_null=True)
     latitude = serializers.DecimalField(source="location.latitude", read_only=True, allow_null=True, max_digits=13, decimal_places=10)
     longitude = serializers.DecimalField(source="location.longitude", read_only=True, allow_null=True, max_digits=13, decimal_places=10)
+    images = serializers.SerializerMethodField()
+
+    def get_images(self, obj):
+        images = sorted(obj.images.all(), key=lambda image: (not image.is_primary, image.order, image.created_at))
+        return PropertyImageSerializer(images, many=True).data
 
     class Meta:
         model = Property
@@ -43,6 +48,7 @@ class PropertyListSerializer(serializers.ModelSerializer):
             "total_favorites",
             "total_contacts",
             "available_from",
+            "images",
             "created_at",
         ]
 

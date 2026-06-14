@@ -33,12 +33,10 @@ class ConversationConsumer(AsyncJsonWebsocketConsumer):
         return value
 
     async def connect(self):
+        await self.accept()
         user = self.scope.get("user")
         if not user or not user.is_authenticated:
-            # Accept first to allow the client to send an authenticate message (TASK-18B)
-            await self.accept()
             self._authenticated = False
-            # Close if no auth message arrives within the timeout
             asyncio.ensure_future(self._auth_timeout())
             return
 
@@ -48,7 +46,10 @@ class ConversationConsumer(AsyncJsonWebsocketConsumer):
         """Close the connection if authentication is not completed in time."""
         await asyncio.sleep(10)
         if not getattr(self, "_authenticated", False):
-            await self.close(code=4401)
+            try:
+                await self.close(code=4401)
+            except RuntimeError:
+                pass
 
     async def _setup_conversation(self, user):
         conversation_id = self.scope["url_route"]["kwargs"]["conversation_id"]
@@ -130,6 +131,7 @@ class ConversationConsumer(AsyncJsonWebsocketConsumer):
                 sender=self.scope["user"],
                 content=payload.get("content"),
                 image=None,
+                client_id=payload.get("client_id"),
             )
             data = await database_sync_to_async(lambda: MessageSerializer(message).data)()
             data = self._channel_safe(data)
@@ -207,7 +209,51 @@ class ConversationConsumer(AsyncJsonWebsocketConsumer):
         await self.send_json(
             {
                 "type": "read.updated",
-                "updated": event.get("updated", 0),
-                "user_id": event.get("user_id"),
+            }
+        )
+
+class UserConsumer(AsyncJsonWebsocketConsumer):
+    async def connect(self):
+        await self.accept()
+        user = self.scope.get("user")
+        if not user or not user.is_authenticated:
+            self._authenticated = False
+            asyncio.ensure_future(self._auth_timeout())
+            return
+            
+        await self._setup_user(user)
+
+    async def _auth_timeout(self):
+        await asyncio.sleep(10)
+        if not getattr(self, "_authenticated", False):
+            await self.close(code=4401)
+
+    async def _setup_user(self, user):
+        self.group_name = f"user_{user.id}"
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        self._authenticated = True
+
+    async def disconnect(self, code):
+        if hasattr(self, "group_name"):
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+        await super().disconnect(code)
+
+    async def receive_json(self, content, **kwargs):
+        action = content.get("action")
+        if action == "authenticate":
+            if getattr(self, "_authenticated", True):
+                return
+            success = await authenticate_from_message(self.scope, content.get("token", ""))
+            if not success:
+                await self.close(code=4401)
+                return
+            await self._setup_user(self.scope["user"])
+            return
+
+    async def chat_conversation_updated(self, event):
+        await self.send_json(
+            {
+                "type": "conversation.updated",
+                "conversation": event["conversation"],
             }
         )

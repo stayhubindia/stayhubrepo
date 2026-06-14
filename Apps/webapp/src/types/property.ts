@@ -18,6 +18,7 @@ export interface PropertyListItem {
   total_favorites: number;
   total_contacts: number;
   available_from: string | null;
+  images?: PropertyImage[];
   created_at: string;
 }
 

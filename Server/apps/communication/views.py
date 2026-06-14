@@ -2,6 +2,8 @@ from rest_framework import status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from apps.communication.serializers import (
@@ -54,8 +56,21 @@ class ConversationMessageListCreateAPIView(APIView):
             sender=request.user,
             content=serializer.validated_data.get("content"),
             image=serializer.validated_data.get("image"),
+            audio=serializer.validated_data.get("audio"),
+            client_id=serializer.validated_data.get("client_id"),
         )
-        return Response(MessageSerializer(message).data, status=status.HTTP_201_CREATED)
+        
+        message_data = MessageSerializer(message).data
+        from apps.communication.consumers import ConversationConsumer
+        channel_safe_data = ConversationConsumer._channel_safe(message_data)
+        
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"conversation_{conversation.id}",
+            {"type": "chat.message", "message": channel_safe_data},
+        )
+        
+        return Response(message_data, status=status.HTTP_201_CREATED)
 
 
 class ConversationMarkReadAPIView(APIView):
@@ -63,6 +78,15 @@ class ConversationMarkReadAPIView(APIView):
     def post(self, request, conversation_id):
         conversation = CommunicationService.get_conversation_for_user(conversation_id, request.user)
         updated_count = CommunicationService.mark_read(conversation, request.user)
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"conversation_{conversation.id}",
+            {
+                "type": "chat.read",
+                "updated": updated_count,
+                "user_id": str(request.user.id),
+            },
+        )
         return Response({"updated": updated_count}, status=status.HTTP_200_OK)
 
 

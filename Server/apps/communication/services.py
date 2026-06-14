@@ -4,6 +4,7 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from apps.communication.models import Conversation, Message
+from apps.communication.serializers import ConversationSerializer
 from apps.notifications.services import NotificationService
 from apps.properties.models import Property
 from core.constants import (
@@ -11,6 +12,7 @@ from core.constants import (
     CONVERSATION_STATUS_ARCHIVED,
     MESSAGE_TYPE_IMAGE,
     MESSAGE_TYPE_TEXT,
+    MESSAGE_TYPE_AUDIO,
     NOTIFICATION_NEW_MESSAGE,
     OWNER_ROLE,
     PROPERTY_STATUS_ACTIVE,
@@ -89,27 +91,40 @@ class CommunicationService:
 
     @staticmethod
     @transaction.atomic
-    def send_text_message(conversation, sender, content, image=None):
+    def send_text_message(conversation, sender, content, image=None, audio=None, client_id=None):
         CommunicationService._ensure_participant(conversation, sender)
         CommunicationService._ensure_property_active(conversation.property)
+
+        if client_id is not None:
+            existing = Message.objects.filter(conversation=conversation, client_id=client_id).first()
+            if existing:
+                return existing
 
         if conversation.status != CONVERSATION_STATUS_ACTIVE:
             raise PermissionDenied("Only active conversations accept new messages")
 
         cleaned_content = (content or "").strip()
-        if not cleaned_content and image is None:
+        if not cleaned_content and image is None and audio is None:
             raise ValidationError("Message content is required")
 
         recipient = conversation.owner if sender.id == conversation.tenant_id else conversation.tenant
 
-        message_type = MESSAGE_TYPE_IMAGE if image is not None and not cleaned_content else MESSAGE_TYPE_TEXT
+        if audio is not None:
+            message_type = MESSAGE_TYPE_AUDIO
+        elif image is not None and not cleaned_content:
+            message_type = MESSAGE_TYPE_IMAGE
+        else:
+            message_type = MESSAGE_TYPE_TEXT
+            
         message = Message.objects.create(
             conversation=conversation,
             sender=sender,
             message_type=message_type,
             content=cleaned_content,
             image=image,
+            audio=audio,
             is_read=False,
+            client_id=client_id,
         )
 
         unread_field = "owner_unread_count" if recipient.id == conversation.owner_id else "tenant_unread_count"
@@ -128,6 +143,10 @@ class CommunicationService:
             message="You have a new conversation message.",
             reference_id=conversation.id,
         )
+
+        CommunicationService._broadcast_global_conversation_update(conversation, recipient)
+        CommunicationService._broadcast_global_conversation_update(conversation, sender)
+
         return message
 
     @staticmethod
@@ -146,7 +165,31 @@ class CommunicationService:
         unread_field = "tenant_unread_count" if actor.id == conversation.tenant_id else "owner_unread_count"
         Conversation.objects.filter(id=conversation.id).update(**{unread_field: 0})
         conversation.refresh_from_db(fields=["owner_unread_count", "tenant_unread_count"])
+        
+        CommunicationService._broadcast_global_conversation_update(conversation, actor)
+        
         return updated
+
+    @staticmethod
+    def _broadcast_global_conversation_update(conversation, user):
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
+        
+        channel_layer = get_channel_layer()
+        if not channel_layer:
+            return
+            
+        data = ConversationSerializer(conversation).data
+        from apps.communication.consumers import ConversationConsumer
+        channel_safe_data = ConversationConsumer._channel_safe(data)
+
+        async_to_sync(channel_layer.group_send)(
+            f"user_{user.id}",
+            {
+                "type": "chat.conversation_updated",
+                "conversation": channel_safe_data,
+            },
+        )
 
     @staticmethod
     @transaction.atomic

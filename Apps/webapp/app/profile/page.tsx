@@ -1,20 +1,26 @@
 "use client";
 
 import {
+  Building2,
   Check,
   CheckCircle2,
+  Heart,
   Link2,
   LoaderCircle,
   Mail,
   MapPin,
+  Menu,
+  MessageSquare,
   Pencil,
   Phone,
+  Search,
   Shield,
   User,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 
 import { useRequireAuth } from "@/hooks/use-route-guard";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -23,6 +29,10 @@ import { useLinkFirebase } from "@/modules/auth/hooks";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/query-states";
 import { auth, googleProvider } from "@/config/firebase";
 import { signInWithPopup } from "firebase/auth";
+import { DesktopSidebar } from "@/components/layout/desktop-sidebar";
+import { ProfileDropdown } from "@/components/layout/profile-dropdown";
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
+import { useUnreadCount } from "@/hooks/use-unread-count";
 
 interface ProfileDraft {
   first_name: string;
@@ -44,6 +54,7 @@ export default function ProfilePage() {
   const [draft, setDraft] = useState<ProfileDraft | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [linkingError, setLinkingError] = useState("");
+  const { count: unreadCount, isLoading: unreadLoading, isError: unreadError } = useUnreadCount();
 
   useEffect(() => {
     if (!meQuery.data) return;
@@ -166,8 +177,51 @@ export default function ProfilePage() {
     }`;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.1),_transparent_55%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)] pb-32">
-      <div className="mx-auto max-w-2xl px-4 pt-6 sm:px-6">
+    <div className="flex min-h-screen bg-slate-50 w-full pb-24 lg:pb-0">
+      <DesktopSidebar />
+      <main className="flex-1 flex flex-col min-w-0">
+        {/* Topbar */}
+        <header className="h-[72px] border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-40 bg-white">
+          {/* mobile menu */}
+          <div className="flex items-center gap-4 lg:hidden">
+            <button onClick={() => window.dispatchEvent(new CustomEvent("toggle-mobile-sidebar"))} className="text-slate-600 hover:text-slate-900 p-2 -ml-2 rounded-xl hover:bg-slate-100 transition-colors">
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+              <Building2 className="w-4 h-4 text-emerald-400" />
+            </div>
+          </div>
+          {/* desktop search */}
+          <div className="hidden lg:block flex-1 max-w-2xl relative mr-6">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <input placeholder="Search by location, property or category" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-11 pr-12 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500/50 focus:bg-white transition-colors" />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-mono border border-slate-200 rounded px-1.5 py-0.5 bg-white shadow-sm">⌘K</span>
+          </div>
+          {/* right actions */}
+          <div className="flex items-center gap-4 sm:gap-6 ml-auto">
+            <Link href="/favorites" className="hidden sm:flex flex-col items-center gap-1.5 group">
+              <Heart className="w-5 h-5 text-slate-500 group-hover:text-slate-900 transition-colors" />
+              <span className="text-[10px] font-semibold text-slate-500 group-hover:text-slate-900">Wishlist</span>
+            </Link>
+            <Link href="/chats" className="hidden sm:flex flex-col items-center gap-1.5 group relative">
+              <div className="relative">
+                <MessageSquare className="w-5 h-5 text-slate-500 group-hover:text-slate-900 transition-colors" />
+                {!unreadLoading && !unreadError && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-2 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold text-white shadow-sm">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] font-semibold text-slate-500 group-hover:text-slate-900">Messages</span>
+            </Link>
+            <NotificationDropdown variant="icon-label" className="hidden sm:flex" />
+            <div className="hidden sm:block w-px h-8 bg-slate-200 mx-2" />
+            <ProfileDropdown />
+          </div>
+        </header>
+        {/* page content */}
+        <div className="flex-1 px-4 py-6 sm:px-6 lg:px-10 pb-28">
+          <div className="mx-auto max-w-2xl">
 
         {/* ── Hero card ── */}
         <section className="relative overflow-hidden rounded-3xl bg-slate-950 text-white shadow-[0_20px_60px_rgba(15,23,42,0.22)]">
@@ -474,7 +528,9 @@ export default function ProfilePage() {
 
           </div>
         )}
-      </div>
-    </main>
+          </div>
+        </div>
+      </main>
+    </div>
   );
 }

@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Star, Zap, MessageSquareText } from "lucide-react";
+import { Building2, Heart, Menu, MessageSquare, Search, Star, Zap, MessageSquareText } from "lucide-react";
+import { DesktopSidebar } from "@/components/layout/desktop-sidebar";
+import { ProfileDropdown } from "@/components/layout/profile-dropdown";
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
+import { useUnreadCount } from "@/hooks/use-unread-count";
 
 const benefits = [
   {

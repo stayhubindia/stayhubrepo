@@ -1,14 +1,23 @@
 "use client";
 
-import { Search, MessageCircle, Send, ChevronLeft } from "lucide-react";
+import { 
+  Search as SearchIcon, MessageCircle, Send, ChevronLeft, 
+  MoreVertical, Paperclip, Smile, Edit3, ExternalLink, MapPin, Archive,
+  Building2, Heart, Menu, MessageSquare,
+} from "lucide-react";
+import Link from "next/link";
 import { useRequireAuth } from "@/hooks/use-route-guard";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { wsService } from "@/services/websocket";
 import { useAuthStore } from "@/store/auth-store";
-import { useConversations, useMarkAsRead, useMessages } from "@/modules/communication/hooks";
+import { useConversations, useMarkAsRead, useMessages, useArchiveConversation } from "@/modules/communication/hooks";
 import { getApiErrorMessage } from "@/lib/api-error";
+import toast from "react-hot-toast";
 import { ErrorState } from "@/components/ui/query-states";
 import { useQueryClient } from "@tanstack/react-query";
+import { DesktopSidebar } from "@/components/layout/desktop-sidebar";
+import { ProfileDropdown } from "@/components/layout/profile-dropdown";
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
 import type { Conversation } from "@/types/communication";
 
 type LocalPendingMessage = {
@@ -33,6 +42,7 @@ export default function ChatsPage() {
   const [message, setMessage] = useState("");
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState<"all" | "unread" | "bookings">("all");
   const [sendError, setSendError] = useState("");
   const [pendingMessages, setPendingMessages] = useState<LocalPendingMessage[]>([]);
   const [showMobileChat, setShowMobileChat] = useState(false);
@@ -43,11 +53,13 @@ export default function ChatsPage() {
   const conversationsQuery = useConversations(!!user);
   const messagesQuery = useMessages(selectedConversation, !!selectedConversation);
   const markAsReadMutation = useMarkAsRead(selectedConversation ?? "");
+  const archiveMutation = useArchiveConversation();
   const queryClient = useQueryClient();
   const currentUserId = user?.id ?? null;
   const userRole = user?.role ?? "TENANT";
   const conversations = useMemo(() => conversationsQuery.data ?? [], [conversationsQuery.data]);
   const messages = useMemo(() => messagesQuery.data ?? [], [messagesQuery.data]);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const getUnreadCount = (conv: Conversation) =>
     userRole === "TENANT" ? conv.tenant_unread_count : conv.owner_unread_count;
@@ -150,12 +162,22 @@ export default function ChatsPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messagesQuery.data, pendingMessages]);
 
-  const filteredConversations = useMemo(() => conversations.filter((conv) => {
-    const otherUser = userRole === "TENANT" ? conv.owner : conv.tenant;
-    const userName = getDisplayName(otherUser.first_name, otherUser.last_name, otherUser.email);
-    return userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           conv.property.title.toLowerCase().includes(searchQuery.toLowerCase());
-  }), [conversations, searchQuery, userRole]);
+  const filteredConversations = useMemo(() => {
+    return conversations.filter((conv) => {
+      const otherUser = userRole === "TENANT" ? conv.owner : conv.tenant;
+      const userName = getDisplayName(otherUser.first_name, otherUser.last_name, otherUser.email);
+      const matchesSearch = userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            conv.property.title.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      if (!matchesSearch) return false;
+
+      if (activeFilter === "unread") {
+        return getUnreadCount(conv) > 0;
+      }
+      
+      return true;
+    });
+  }, [conversations, searchQuery, userRole, activeFilter]);
 
   useEffect(() => {
     if (!conversations.length || selectedConversation) return;
@@ -174,29 +196,6 @@ export default function ChatsPage() {
   useEffect(() => {
     setSendError("");
   }, [selectedConversation]);
-
-  useEffect(() => {
-    if (!selectedConversation || markAsReadMutation.isPending) return;
-
-    const selected = conversations.find((conv) => conv.id === selectedConversation);
-    if (!selected) return;
-
-    const unread = getUnreadCount(selected);
-    if (unread <= 0) return;
-
-    markConversationReadOptimistic(selectedConversation);
-    markAsReadMutation.mutate(undefined, {
-      onError: () => {
-        conversationsQuery.refetch();
-      },
-    });
-  }, [
-    conversations,
-    conversationsQuery,
-    markAsReadMutation,
-    selectedConversation,
-    userRole,
-  ]);
 
   const handleSendMessage = async () => {
     if (!message.trim() || !selectedConversation) return;
@@ -265,10 +264,12 @@ export default function ChatsPage() {
       return;
     }
 
-    wsService.sendTyping(true);
-    if (typingTimeoutRef.current) {
+    if (!typingTimeoutRef.current) {
+      wsService.sendTyping(true);
+    } else {
       clearTimeout(typingTimeoutRef.current);
     }
+    
     typingTimeoutRef.current = setTimeout(() => {
       wsService.sendTyping(false);
       typingTimeoutRef.current = null;
@@ -300,40 +301,109 @@ export default function ChatsPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-56px)] bg-slate-100">
+    <div className="flex min-h-screen bg-slate-50 w-full">
+      <DesktopSidebar />
+
+      {/* ── Right: topbar + chat ── */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+        {/* ── Topbar ── */}
+        <header className="h-[72px] border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-40 bg-white shrink-0">
+          {/* Mobile menu + logo */}
+          <div className="flex items-center gap-4 lg:hidden">
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("toggle-mobile-sidebar"))}
+              className="text-slate-600 hover:text-slate-900 p-2 -ml-2 rounded-xl hover:bg-slate-100 transition-colors"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+              <Building2 className="w-4 h-4 text-emerald-400" />
+            </div>
+          </div>
+
+          {/* Desktop search */}
+          <div className="hidden lg:block flex-1 max-w-2xl relative mr-6">
+            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <input
+              placeholder="Search by location, property or category"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-11 pr-12 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500/50 focus:bg-white transition-colors"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-mono border border-slate-200 rounded px-1.5 py-0.5 bg-white shadow-sm">⌘K</span>
+          </div>
+
+          {/* Right actions */}
+          <div className="flex items-center gap-4 sm:gap-6 ml-auto">
+            <Link href="/favorites" className="hidden sm:flex flex-col items-center gap-1.5 group">
+              <Heart className="w-5 h-5 text-slate-500 group-hover:text-slate-900 transition-colors" />
+              <span className="text-[10px] font-semibold text-slate-500 group-hover:text-slate-900">Wishlist</span>
+            </Link>
+            <Link href="/chats" className="hidden sm:flex flex-col items-center gap-1.5 group relative">
+              <div className="relative">
+                <MessageSquare className="w-5 h-5 text-emerald-500" />
+                {totalUnread > 0 && (
+                  <span className="absolute -top-1 -right-2 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold text-white shadow-sm">
+                    {totalUnread > 99 ? "99+" : totalUnread}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] font-semibold text-emerald-600">Messages</span>
+            </Link>
+            <NotificationDropdown variant="icon-label" className="hidden sm:flex" />
+            <div className="hidden sm:block w-px h-8 bg-slate-200 mx-2" />
+            <ProfileDropdown />
+          </div>
+        </header>
+
+      {/* ── Main Chat Layout ── */}
+      <div className="flex-1 flex overflow-hidden">
       {/* ── LEFT SIDEBAR ────────────────────────────────────────────────── */}
       <aside
         className={`
           flex flex-col w-full md:w-[320px] lg:w-[360px] shrink-0
-          bg-white border-r border-slate-200/80
+          bg-white border-r border-slate-200
           ${showMobileChat ? "hidden md:flex" : "flex"}
         `}
       >
         {/* Sidebar header */}
-        <div className="px-4 pt-5 pb-3 border-b border-slate-100">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-extrabold tracking-tight text-slate-900">Messages</h1>
-            <div className="flex items-center gap-2">
-              {totalUnread > 0 ? (
-                <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-xs font-bold text-indigo-700">
-                  {totalUnread > 99 ? "99+" : totalUnread} unread
-                </span>
-              ) : (
-                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                  All read
-                </span>
-              )}
-            </div>
+        <div className="p-5 border-b border-slate-100 bg-white sticky top-0 z-10">
+          <div className="flex items-center justify-between mb-5">
+            <h1 className="text-2xl font-black text-slate-900">Messages</h1>
+            <button className="p-2 text-slate-400 hover:text-slate-900 transition-colors">
+              <Edit3 className="w-5 h-5" />
+            </button>
           </div>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+          
+          <div className="relative mb-5">
+            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
             <input
               type="text"
-              placeholder="Search people or properties…"
+              placeholder="Search conversations"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 transition"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500/50 focus:bg-white transition-all"
             />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setActiveFilter("all")}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeFilter === "all" ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/20" : "bg-slate-50 text-slate-500 hover:bg-slate-100"}`}
+            >
+              All
+            </button>
+            <button 
+              onClick={() => setActiveFilter("unread")}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${activeFilter === "unread" ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/20" : "bg-slate-50 text-slate-500 hover:bg-slate-100"}`}
+            >
+              Unread {totalUnread > 0 && <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${activeFilter === "unread" ? "bg-white text-emerald-600" : "bg-emerald-500 text-white"}`}>{totalUnread}</span>}
+            </button>
+            <button 
+              onClick={() => setActiveFilter("bookings")}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeFilter === "bookings" ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/20" : "bg-slate-50 text-slate-500 hover:bg-slate-100"}`}
+            >
+              Bookings
+            </button>
           </div>
         </div>
 
@@ -371,45 +441,107 @@ export default function ChatsPage() {
                 const initial = name.charAt(0).toUpperCase();
 
                 return (
-                  <button
-                    key={conv.id}
-                    type="button"
-                    onClick={() => { setSelectedConversation(conv.id); setShowMobileChat(true); }}
-                    className={`w-full rounded-2xl px-3 py-3 text-left transition-all ${
-                      isActive
-                        ? "bg-indigo-50 ring-1 ring-indigo-200"
-                        : "hover:bg-slate-50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      {/* Avatar */}
-                      <div className={`h-11 w-11 shrink-0 rounded-2xl bg-gradient-to-br ${avatarGradient(name)} flex items-center justify-center text-white text-sm font-bold shadow-sm`}>
-                        {initial}
-                      </div>
-                      {/* Text */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-0.5">
-                          <span className={`text-sm font-semibold truncate ${isActive ? "text-indigo-700" : unread > 0 ? "text-slate-950" : "text-slate-900"}`}>
-                            {name}
-                          </span>
-                          {conv.last_message_at && (
-                            <span className={`text-[10px] shrink-0 font-medium ${unread > 0 ? "text-indigo-600" : "text-slate-400"}`}>
-                              {fmtConvTime(conv.last_message_at)}
-                            </span>
-                          )}
+                  <div key={conv.id} className="relative group/row">
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedConversation(conv.id); setShowMobileChat(true); }}
+                      className={`w-full px-5 py-4 text-left transition-all relative border-b border-slate-100/50 ${
+                        isActive
+                          ? "bg-emerald-50/50 border-l-4 border-l-emerald-500"
+                          : "hover:bg-slate-50 border-l-4 border-l-transparent"
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        {/* Avatar */}
+                        <div className="relative shrink-0">
+                          <div className={`h-12 w-12 rounded-2xl bg-gradient-to-br ${avatarGradient(name)} flex items-center justify-center text-white text-base font-bold shadow-sm`}>
+                            {initial}
+                          </div>
+                          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full" />
                         </div>
-                        <p className={`text-xs truncate ${unread > 0 ? "font-semibold text-slate-700" : "text-slate-400"}`}>
-                          {conv.property.title}
-                        </p>
+                        
+                        {/* Text */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className={`text-[15px] font-extrabold truncate ${isActive ? "text-emerald-900" : "text-slate-900"}`}>
+                              {name}
+                            </span>
+                            {conv.last_message_at && (
+                              <span className="text-[11px] font-bold text-slate-400 tracking-tight">
+                                {fmtConvTime(conv.last_message_at)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <p className={`text-[11px] font-bold truncate uppercase tracking-wider ${isActive ? "text-emerald-600" : "text-slate-400"}`}>
+                              {conv.property.title}
+                            </p>
+                            {conv.status === "ARCHIVED" && (
+                              <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-wide">
+                                Archived
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-[13px] truncate leading-snug ${unread > 0 ? "text-slate-900 font-bold" : "text-slate-500 font-medium"}`}>
+                            {unread > 0 ? "New message received..." : "Click to view conversation"}
+                          </p>
+                        </div>
+
+                        {unread > 0 && (
+                          <span className="shrink-0 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] font-black text-white shadow-sm shadow-emerald-500/20">
+                            {unread}
+                          </span>
+                        )}
                       </div>
-                      {/* Unread badge */}
-                      {unread > 0 && (
-                        <span className="shrink-0 inline-flex min-w-5 items-center justify-center rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                          {unread > 9 ? "9+" : unread}
-                        </span>
-                      )}
-                    </div>
-                  </button>
+                    </button>
+
+                    {/* ⋮ context menu trigger — appears on row hover */}
+                    <button
+                      type="button"
+                      aria-label="Conversation options"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMenuId(openMenuId === conv.id ? null : conv.id);
+                      }}
+                      className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity z-10"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+
+                    {/* Dropdown menu */}
+                    {openMenuId === conv.id && (
+                      <>
+                        {/* Backdrop to close menu on outside click */}
+                        <div
+                          className="fixed inset-0 z-20"
+                          onClick={() => setOpenMenuId(null)}
+                        />
+                        <div className="absolute right-2 top-10 z-30 min-w-[140px] bg-white border border-slate-200 rounded-xl shadow-lg shadow-slate-200/60 py-1 overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              archiveMutation.mutate(conv.id, {
+                                onSuccess: () => {
+                                  toast.success("Conversation archived");
+                                  setOpenMenuId(null);
+                                },
+                                onError: (err) => {
+                                  toast.error(getApiErrorMessage(err));
+                                  setOpenMenuId(null);
+                                },
+                              });
+                            }}
+                            disabled={archiveMutation.isPending}
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Archive className="w-4 h-4 text-slate-400" />
+                            Archive
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -428,51 +560,88 @@ export default function ChatsPage() {
         {selectedConvData && otherUser ? (
           <>
             {/* Chat header */}
-            <header className="flex items-center gap-3 px-4 py-3 border-b border-slate-200/80 bg-white/90 backdrop-blur-sm shrink-0 shadow-sm">
-              <button
-                type="button"
-                onClick={() => setShowMobileChat(false)}
-                className="md:hidden flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-700 transition"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
+            <header className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white shrink-0 sticky top-0 z-10">
+              <div className="flex items-center gap-4 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => setShowMobileChat(false)}
+                  className="md:hidden p-2 -ml-2 text-slate-600 hover:text-emerald-500 transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
 
-              {(() => {
-                const name = getDisplayName(otherUser.first_name, otherUser.last_name, otherUser.email);
-                return (
-                  <div className={`h-10 w-10 shrink-0 rounded-xl bg-gradient-to-br ${avatarGradient(name)} flex items-center justify-center text-white text-sm font-bold shadow-sm`}>
-                    {name.charAt(0).toUpperCase()}
-                  </div>
-                );
-              })()}
+                {(() => {
+                  const name = getDisplayName(otherUser.first_name, otherUser.last_name, otherUser.email);
+                  return (
+                    <div className="relative">
+                      <div className={`h-12 w-12 shrink-0 rounded-2xl bg-gradient-to-br ${avatarGradient(name)} flex items-center justify-center text-white text-lg font-bold shadow-md`}>
+                        {name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full" />
+                    </div>
+                  );
+                })()}
 
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-bold text-slate-900 truncate leading-tight">
-                  {getDisplayName(otherUser.first_name, otherUser.last_name, otherUser.email)}
-                </h3>
-                {isOtherUserTyping ? (
-                  <span className="flex items-center gap-1.5 text-xs text-indigo-600 font-medium">
-                    <span className="flex gap-0.5">
-                      {[0,1,2].map(i => (
-                        <span
-                          key={i}
-                          className="inline-block h-1.5 w-1.5 rounded-full bg-indigo-500 animate-bounce"
-                          style={{ animationDelay: `${i * 0.15}s` }}
-                        />
-                      ))}
+                <div className="min-w-0">
+                  <h3 className="text-[17px] font-extrabold text-slate-900 truncate flex items-center gap-2">
+                    {getDisplayName(otherUser.first_name, otherUser.last_name, otherUser.email)}
+                    {!isOtherUserTyping && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                  </h3>
+                  {isOtherUserTyping ? (
+                    <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold">
+                      <span className="flex gap-0.5">
+                        {[0,1,2].map(i => (
+                          <span
+                            key={i}
+                            className="inline-block h-1 w-1 rounded-full bg-emerald-500 animate-bounce"
+                            style={{ animationDelay: `${i * 0.15}s` }}
+                          />
+                        ))}
+                      </span>
+                      typing...
                     </span>
-                    typing…
-                  </span>
-                ) : (
-                  <p className="text-xs text-slate-400 truncate leading-tight">{selectedConvData.property.title}</p>
-                )}
+                  ) : (
+                    <p className="text-xs text-slate-500 font-medium truncate flex items-center gap-1.5">
+                      {userRole === "TENANT" ? "Host" : "Tenant"} • {selectedConvData.property.title}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Property Card in Header */}
+              <div className="hidden lg:flex items-center gap-4 bg-slate-50 border border-slate-100 p-2 rounded-2xl max-w-sm">
+                <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-200 shrink-0">
+                  <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=100&q=80" alt="Property" className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1 min-w-0 pr-4">
+                  <h4 className="text-[13px] font-bold text-slate-900 truncate">{selectedConvData.property.title}</h4>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    <span className="text-[11px] text-slate-500 flex items-center gap-1"><MapPin className="w-3 h-3" /> Sector 62, Noida</span>
+                    <span className="text-[11px] font-bold text-emerald-600">₹28,000 / month</span>
+                  </div>
+                </div>
+                <button className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 hover:bg-slate-50 transition-colors shadow-sm">
+                  View Property
+                </button>
+                <button className="p-2 text-slate-400 hover:text-slate-900">
+                  <MoreVertical className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex lg:hidden items-center gap-2">
+                <button className="p-2 text-slate-400 hover:text-slate-900">
+                  <ExternalLink className="w-5 h-5" />
+                </button>
+                <button className="p-2 text-slate-400 hover:text-slate-900">
+                  <MoreVertical className="w-5 h-5" />
+                </button>
               </div>
             </header>
 
             {/* Messages area */}
             <div
-              className="flex-1 overflow-y-auto px-4 py-5 space-y-1 scrollbar-hide"
-              style={{ background: "radial-gradient(ellipse at top, rgba(99,102,241,0.04), transparent 60%), linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)" }}
+              className="flex-1 overflow-y-auto px-6 py-8 space-y-3 scrollbar-hide"
+              style={{ background: "radial-gradient(ellipse at top, rgba(16,185,129,0.04), transparent 60%), linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)" }}
             >
               {sendError && (
                 <div className="mb-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -506,19 +675,19 @@ export default function ChatsPage() {
                       <div key={msg.id} className={`flex ${isMine ? "justify-end" : "justify-start"} mb-1`}>
                         <div
                           className={`
-                            max-w-[78%] md:max-w-[62%] px-4 py-2.5
+                            max-w-[78%] md:max-w-[65%] px-5 py-3 relative group
                             ${isMine
-                              ? "bg-gradient-to-br from-indigo-500 to-violet-600 text-white rounded-2xl rounded-br-sm shadow-md shadow-indigo-500/20"
-                              : "bg-white text-slate-800 border border-slate-200 rounded-2xl rounded-bl-sm shadow-sm"
+                              ? "bg-emerald-50 text-slate-800 border border-emerald-100 rounded-[20px] rounded-tr-none shadow-sm"
+                              : "bg-white text-slate-800 border border-slate-100 rounded-[20px] rounded-tl-none shadow-sm"
                             }
                           `}
                         >
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
-                          <div className={`mt-1 flex items-center justify-end gap-1.5 ${isMine ? "text-indigo-200" : "text-slate-400"}`}>
-                            <span className="text-[10px]">{fmtTime(msg.created_at)}</span>
+                          <p className="text-[14.5px] leading-relaxed whitespace-pre-wrap break-words font-medium">{msg.content}</p>
+                          <div className={`mt-1.5 flex items-center justify-end gap-1.5 ${isMine ? "text-emerald-600/60" : "text-slate-400"}`}>
+                            <span className="text-[10px] font-bold uppercase tracking-tight">{fmtTime(msg.created_at)}</span>
                             {isMine && (
-                              <span className={`text-[10px] font-semibold ${msg.is_read ? "text-violet-100" : "text-indigo-200"}`}>
-                                {msg.is_read ? "Seen" : "Sent"}
+                              <span className={`text-[10px] ${msg.is_read ? "text-emerald-500" : "text-emerald-400"}`}>
+                                {msg.is_read ? "✓✓" : "✓"}
                               </span>
                             )}
                           </div>
@@ -544,53 +713,64 @@ export default function ChatsPage() {
             </div>
 
             {/* Input bar */}
-            <footer className="shrink-0 border-t border-slate-200/80 bg-white/90 backdrop-blur-sm px-4 py-3">
-              <div className="flex items-end gap-2.5">
-                <div className="flex-1">
-                  <textarea
-                    value={message}
-                    onChange={(e) => handleMessageChange(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        void handleSendMessage();
-                      }
-                    }}
-                    placeholder="Type a message…"
-                    rows={1}
-                    maxLength={MESSAGE_MAX_LENGTH + 1}
-                    className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 transition max-h-32 overflow-y-auto"
-                    style={{ lineHeight: "1.5" }}
-                  />
-                </div>
-                <button
-                  onClick={handleSendMessage}
-                  disabled={!message.trim() || message.length > MESSAGE_MAX_LENGTH}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/25 transition hover:from-indigo-600 hover:to-violet-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
-                >
-                  <Send className="h-4 w-4" />
+            <footer className="shrink-0 border-t border-slate-200 bg-white px-6 py-4">
+              <div className="flex items-center gap-4 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2 focus-within:border-emerald-500/50 focus-within:bg-white transition-all">
+                <button className="p-2 text-slate-400 hover:text-slate-900 transition-colors">
+                  <Paperclip className="w-5 h-5" />
                 </button>
+                
+                <textarea
+                  value={message}
+                  onChange={(e) => handleMessageChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      void handleSendMessage();
+                    }
+                  }}
+                  placeholder="Type a message..."
+                  rows={1}
+                  maxLength={MESSAGE_MAX_LENGTH + 1}
+                  className="flex-1 bg-transparent border-none focus:ring-0 text-[14.5px] text-slate-900 placeholder:text-slate-400 py-2.5 resize-none max-h-32 scrollbar-hide"
+                  style={{ lineHeight: "1.5" }}
+                />
+
+                <div className="flex items-center gap-2">
+                  <button className="p-2 text-slate-400 hover:text-slate-900 transition-colors">
+                    <Smile className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={!message.trim() || message.length > MESSAGE_MAX_LENGTH}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-600 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                  >
+                    <Send className="h-4 h-4 fill-white" />
+                  </button>
+                </div>
               </div>
+              
               {remainingChars < 200 && (
-                <p className={`mt-1.5 text-right text-[11px] font-medium ${remainingChars < 0 ? "text-red-500" : "text-slate-400"}`}>
-                  {remainingChars >= 0 ? `${remainingChars} chars left` : "Too long"}
+                <p className={`mt-2 text-right text-[10px] font-bold ${remainingChars < 0 ? "text-rose-500" : "text-slate-400"}`}>
+                  {remainingChars >= 0 ? `${remainingChars} characters remaining` : "Message too long"}
                 </p>
               )}
             </footer>
           </>
         ) : (
           /* Empty state — no conversation selected */
-          <div className="flex flex-1 flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.06),_transparent_55%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)]">
-            <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-3xl border border-slate-200 bg-white shadow-lg shadow-slate-200/60">
-              <MessageCircle className="h-10 w-10 text-indigo-400" />
+          <div className="flex flex-1 flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,_rgba(16,185,129,0.06),_transparent_55%),linear-gradient(180deg,_#FFFFFF_0%,_#F8FAFC_100%)]">
+            <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-[32px] border border-slate-100 bg-white shadow-xl shadow-slate-200/40">
+              <MessageCircle className="h-10 w-10 text-emerald-400" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-1">Your messages</h3>
-            <p className="text-sm text-slate-500 text-center max-w-xs">
-              Select a conversation to start chatting
+            <h3 className="text-xl font-black text-slate-900 mb-2">Select a Conversation</h3>
+            <p className="text-sm text-slate-500 text-center max-w-xs font-medium">
+              Choose a message from the list on the left to view your conversation and property details.
             </p>
           </div>
         )}
       </main>
+      </div>
+      </div>
     </div>
   );
 }

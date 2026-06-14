@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'amenity.dart';
 
 class Property extends Equatable {
   const Property({
@@ -21,6 +22,10 @@ class Property extends Equatable {
     this.locationCity,
     this.locationState,
     this.locationAddress,
+    this.locationLocality,
+    this.locationPincode,
+    this.latitude,
+    this.longitude,
     this.ownerName,
     this.ownerId,
     this.images = const [],
@@ -47,12 +52,16 @@ class Property extends Equatable {
   final String? locationCity;
   final String? locationState;
   final String? locationAddress;
+  final String? locationLocality;
+  final String? locationPincode;
+  final double? latitude;
+  final double? longitude;
 
   final String? ownerName;
   final String? ownerId;
 
   final List<String> images;
-  final List<String> amenities;
+  final List<Amenity> amenities;
   final bool isFeatured;
 
   final int totalViews;
@@ -63,8 +72,28 @@ class Property extends Equatable {
   bool get isActive => status == 'ACTIVE';
 
   factory Property.fromJson(Map<String, dynamic> json) {
+    // PropertyListSerializer returns location fields flat (city, state, address).
+    // PropertySerializer returns them nested under 'location'.
     final loc = json['location'] as Map<String, dynamic>?;
-    final owner = json['owner'] as Map<String, dynamic>?;
+    final ownerRaw = json['owner'];
+    final ownerMap = ownerRaw is Map<String, dynamic> ? ownerRaw : null;
+    final ownerIdParsed = ownerRaw is String ? ownerRaw : ownerMap?['id'] as String?;
+
+    // Helper: safely parse int from int, double, or string
+    int? parseInt(dynamic v) {
+      if (v == null) return null;
+      if (v is int) return v;
+      if (v is double) return v.toInt();
+      return int.tryParse(v.toString());
+    }
+
+    // Helper: safely parse double from int, double, or string
+    double? parseDouble(dynamic v) {
+      if (v == null) return null;
+      if (v is double) return v;
+      if (v is int) return v.toDouble();
+      return double.tryParse(v.toString());
+    }
 
     return Property(
       id: json['id'] as String,
@@ -72,39 +101,70 @@ class Property extends Equatable {
       description: json['description'] as String? ?? '',
       propertyType: json['property_type'] as String? ?? '',
       furnishing: json['furnishing'] as String? ?? '',
-      rent: double.tryParse(json['rent']?.toString() ?? '0') ?? 0,
+      rent: parseDouble(json['rent']) ?? 0.0,
       status: json['status'] as String? ?? 'PENDING',
-      deposit: double.tryParse(json['deposit']?.toString() ?? ''),
-      bedrooms: json['bedrooms'] as int?,
-      bathrooms: json['bathrooms'] as int?,
-      areaSqft: json['area_sqft'] as int?,
+      deposit: parseDouble(json['deposit']),
+      bedrooms: parseInt(json['bedrooms']),
+      bathrooms: parseInt(json['bathrooms']),
+      areaSqft: parseInt(json['area_sqft']),
       availableFrom: json['available_from'] as String?,
       preferredTenant: json['preferred_tenant'] as String?,
-      locationCity: loc?['city'] as String?,
-      locationState: loc?['state'] as String?,
-      locationAddress: loc?['address'] as String?,
-      ownerName: owner != null
-          ? '${owner['first_name'] ?? ''} ${owner['last_name'] ?? ''}'.trim()
+      // Flat fields (PropertyListSerializer) take priority over nested location
+      locationCity: (json['city'] as String?)?.isNotEmpty == true
+          ? json['city'] as String
+          : loc?['city'] as String?,
+      locationState: (json['state'] as String?)?.isNotEmpty == true
+          ? json['state'] as String
+          : loc?['state'] as String?,
+      locationAddress: (json['address'] as String?)?.isNotEmpty == true
+          ? json['address'] as String
+          : loc?['address'] as String?,
+      locationLocality: (json['locality'] as String?)?.isNotEmpty == true
+          ? json['locality'] as String
+          : loc?['locality'] as String?,
+      locationPincode: (json['pincode'] as String?)?.isNotEmpty == true
+          ? json['pincode'] as String
+          : loc?['pincode'] as String?,
+      // Parse latitude and longitude from flat or nested location fields
+      latitude: parseDouble((json['latitude'] as dynamic?) ?? loc?['latitude']),
+      longitude: parseDouble((json['longitude'] as dynamic?) ?? loc?['longitude']),
+      ownerName: ownerMap != null
+          ? '${ownerMap['first_name'] ?? ''} ${ownerMap['last_name'] ?? ''}'.trim()
           : null,
-      ownerId: owner?['id'] as String?,
+      ownerId: ownerIdParsed,
       images: (json['images'] as List<dynamic>?)
-              ?.map((e) => e.toString())
+              ?.map((e) {
+                String url = '';
+                if (e is String) url = e;
+                if (e is Map) url = e['image'] as String? ?? '';
+                if (url.startsWith('//')) {
+                  url = 'https:$url';
+                } else if (url.startsWith('/')) {
+                  url = 'http://10.0.2.2:8000$url'; // Fallback for local testing if relative
+                }
+                return url;
+              })
+              .where((s) => s.isNotEmpty)
               .toList() ??
           [],
       amenities: (json['amenities'] as List<dynamic>?)
-              ?.map((e) => e.toString())
+              ?.map((e) {
+                if (e is Map) return Amenity.fromJson(e as Map<String, dynamic>);
+                return null;
+              })
+              .whereType<Amenity>()
               .toList() ??
           [],
       isFeatured: json['is_featured'] as bool? ?? false,
-      totalViews: json['total_views'] as int? ?? 0,
-      totalFavorites: json['total_favorites'] as int? ?? 0,
-      totalContacts: json['total_contacts'] as int? ?? 0,
+      totalViews: parseInt(json['total_views']) ?? 0,
+      totalFavorites: parseInt(json['total_favorites']) ?? 0,
+      totalContacts: parseInt(json['total_contacts']) ?? 0,
       createdAt: json['created_at'] as String?,
     );
   }
 
   @override
-  List<Object?> get props => [id, title, rent, status];
+  List<Object?> get props => [id, title, rent, status, latitude, longitude];
 }
 
 class PaginatedProperties {
@@ -122,15 +182,20 @@ class PaginatedProperties {
 
   bool get hasMore => next != null;
 
-  factory PaginatedProperties.fromJson(Map<String, dynamic> json) =>
-      PaginatedProperties(
-        count: json['count'] as int? ?? 0,
-        next: json['next'] as String?,
-        previous: json['previous'] as String?,
-        results: (json['results'] as List<dynamic>)
-            .map((e) => Property.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
+  factory PaginatedProperties.fromJson(Map<String, dynamic> json) {
+    final countRaw = json['count'];
+    final count = countRaw is int
+        ? countRaw
+        : int.tryParse(countRaw?.toString() ?? '0') ?? 0;
+    return PaginatedProperties(
+      count: count,
+      next: json['next'] as String?,
+      previous: json['previous'] as String?,
+      results: (json['results'] as List<dynamic>)
+          .map((e) => Property.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
 }
 
 class PropertyFilter {
@@ -171,27 +236,38 @@ class PropertyFilter {
         'offset': offset.toString(),
       };
 
+  /// Sentinel used to distinguish "not provided" from "explicitly null".
+  static const _absent = Object();
+
   PropertyFilter copyWith({
-    String? city,
-    String? propertyType,
-    double? minRent,
-    double? maxRent,
-    String? furnishing,
-    int? bedrooms,
-    String? search,
-    String? ordering,
+    Object? city = _absent,
+    Object? propertyType = _absent,
+    Object? minRent = _absent,
+    Object? maxRent = _absent,
+    Object? furnishing = _absent,
+    Object? bedrooms = _absent,
+    Object? search = _absent,
+    Object? ordering = _absent,
     int? limit,
     int? offset,
   }) =>
       PropertyFilter(
-        city: city ?? this.city,
-        propertyType: propertyType ?? this.propertyType,
-        minRent: minRent ?? this.minRent,
-        maxRent: maxRent ?? this.maxRent,
-        furnishing: furnishing ?? this.furnishing,
-        bedrooms: bedrooms ?? this.bedrooms,
-        search: search ?? this.search,
-        ordering: ordering ?? this.ordering,
+        city: city == _absent ? this.city : city as String?,
+        propertyType: propertyType == _absent
+            ? this.propertyType
+            : propertyType as String?,
+        minRent:
+            minRent == _absent ? this.minRent : minRent as double?,
+        maxRent:
+            maxRent == _absent ? this.maxRent : maxRent as double?,
+        furnishing: furnishing == _absent
+            ? this.furnishing
+            : furnishing as String?,
+        bedrooms:
+            bedrooms == _absent ? this.bedrooms : bedrooms as int?,
+        search: search == _absent ? this.search : search as String?,
+        ordering:
+            ordering == _absent ? this.ordering : ordering as String?,
         limit: limit ?? this.limit,
         offset: offset ?? this.offset,
       );

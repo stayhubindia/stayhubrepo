@@ -13,9 +13,10 @@ from drf_spectacular.openapi import AutoSchema
 import uuid
 
 from apps.properties.filters import PropertyFilter
-from apps.properties.models import Property, PropertyImage
+from apps.properties.models import Amenity, Property, PropertyImage
 from apps.properties.search import apply_search
 from apps.properties.serializers import (
+    AmenitySerializer,
     PropertyImageSerializer,
     PropertyImageUploadSerializer,
     PropertyListSerializer,
@@ -297,3 +298,11 @@ class PropertyViewSet(viewsets.ModelViewSet):
         serializer = serializer_class(queryset, many=True)
         cache.set(cache_key, serializer.data, getattr(settings, "PROPERTY_LIST_CACHE_TTL_SECONDS", 60))
         return Response(serializer.data)
+
+
+class AmenityViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Amenity.objects.all().order_by("name")
+    serializer_class = AmenitySerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+

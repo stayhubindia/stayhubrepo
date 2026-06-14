@@ -8,7 +8,7 @@ const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8005/api/v1";
 
 export default defineConfig({
-  testDir: "./tests/e2e",
+  testDir: "./test/e2e",
   testMatch: "**/*.spec.ts",
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
@@ -48,6 +48,6 @@ export default defineConfig({
     },
   ],
 
-  globalSetup: require.resolve("./tests/e2e/global-setup.ts"),
-  globalTeardown: require.resolve("./tests/e2e/global-teardown.ts"),
+  globalSetup: require.resolve("./test/e2e/global-setup.ts"),
+  globalTeardown: require.resolve("./test/e2e/global-teardown.ts"),
 });

@@ -49,7 +49,7 @@ describe("AddPropertyPage profile completion guard", () => {
     });
     mockUseIdempotentAction.mockReturnValue({
       runOnce: vi.fn(),
-      isInFlight: false,
+      isInFlight: vi.fn(() => false),
     });
   });
 
@@ -72,12 +72,12 @@ describe("AddPropertyPage profile completion guard", () => {
 
     render(<AddPropertyPage />);
 
-    expect(screen.getByText("Complete Your Profile")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Complete Profile Now" })).toHaveAttribute(
+    expect(screen.getByText("Complete your owner profile first")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Complete profile/i })).toHaveAttribute(
       "href",
       "/owner-onboarding",
     );
-    expect(screen.queryByText("Add Your Property")).not.toBeInTheDocument();
+    expect(screen.queryByText("Create a listing tenants can trust.")).not.toBeInTheDocument();
   });
 
   it("renders property wizard when owner profile is complete", () => {
@@ -99,7 +99,7 @@ describe("AddPropertyPage profile completion guard", () => {
 
     render(<AddPropertyPage />);
 
-    expect(screen.getByText("Add Your Property")).toBeInTheDocument();
-    expect(screen.queryByText("Complete Your Profile")).not.toBeInTheDocument();
+    expect(screen.getByText("Create a listing tenants can trust.")).toBeInTheDocument();
+    expect(screen.queryByText("Complete your owner profile first")).not.toBeInTheDocument();
   });
 });

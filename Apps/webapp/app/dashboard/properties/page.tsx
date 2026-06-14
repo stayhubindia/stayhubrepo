@@ -9,6 +9,7 @@ import {
   Eye,
   Heart,
   MapPin,
+  Menu,
   MessageSquare,
   Pencil,
   Plus,
@@ -22,6 +23,10 @@ import { useIdempotentAction } from "@/hooks/use-idempotent-action";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { useMarkRented, useMyProperties } from "@/modules/properties/hooks";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/query-states";
+import { DesktopSidebar } from "@/components/layout/desktop-sidebar";
+import { ProfileDropdown } from "@/components/layout/profile-dropdown";
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
+import { useUnreadCount } from "@/hooks/use-unread-count";
 
 type StatusFilter = "ALL" | "ACTIVE" | "PENDING" | "DRAFT" | "RENTED" | "REJECTED" | "EXPIRED";
 
